@@ -27,15 +27,15 @@ const Parts = new Schema({
   partDescription: {
     type: String,
   },
-  quantity: {
-    type: Number,
-  },
-  grouped: {
-    type: Boolean,
-  },
-  PiecePerPacket: {
-    type: Number
-  },
+  // quantity: {
+  //   type: Number,
+  // },
+  // grouped: {
+  //   type: Boolean,
+  // },
+  // PiecePerPacket: {
+  //   type: Number
+  // },
   videoUrl: {
     type: String,
   },

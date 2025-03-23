@@ -66,7 +66,7 @@ router.post("/createPrinter", verifyToken, printerController.createPrinter);
 
 // BOM CONTROLS
 // router.post("/uploadCR", verifyToken, sheetController.uploadBomGoogleSheet);
-router.post("/uploadCRFromAdmin", verifyToken, upload.single("file"), sheetController.uploadCRFromAdmin);
+router.post("/ConfirmBomCreation", verifyToken, upload.single("file"), sheetController.BulkUploadCRFromAdmin);
 router.post("/uploadCRFromAdminPreview", verifyToken, upload.single("file"), sheetController.uploadCRFromAdminPreview);
 
 // MANAGE CR

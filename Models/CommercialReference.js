@@ -29,6 +29,9 @@ const partSchema = new Schema({
   parentNumber: {
     type: String,
   },
+  partID:{
+    type: Object
+  }
 });
 
 
