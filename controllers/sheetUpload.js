@@ -679,6 +679,9 @@ exports.uploadCRExcelFromHub = async (req, res) => {
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(worksheet); // Read as array
 
+    // let spoke_id = data.spoke_id
+    // let project_name = res.body
+
     const switchBoards = []
     const CrsListFromExcel = rows
     .filter(row => {
@@ -726,9 +729,6 @@ exports.uploadCRExcelFromHub = async (req, res) => {
 
     // console.log(CRsinCurrentOrder.length)
 
-
-
-
     if (missingCRs.length > 0) {
       return utils.commonResponse(res, 400, "Missing Commercial References", {
         error: "Some Commercial References do not exist in the database",
@@ -774,15 +774,14 @@ exports.uploadCRExcelFromHub = async (req, res) => {
 
     }, []);
     // Project details (static for now, can be dynamic)
-    // const ProjectDetails = {
-    //   project_name: "Project 1",
-    //   project_description: "This is a test data"
-    // };
+    const ProjectDetails = {
+      project_name: "Order",
+    };
     // Sending the response
     utils.commonResponse(res, 200, "success", {
       Switchboards: SwitchBoardWithCRWithParts,
       PartList: FinalPartList,
-      // ProjectDetails
+      ProjectDetails
     });
   } catch (error) {
     console.error(error);
