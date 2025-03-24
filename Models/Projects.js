@@ -21,6 +21,9 @@ const PartsSchema = new Schema({
   PiecePerPacket: {
     type: Number
   },
+  partID : {
+    type: Object,
+  },
 
   isCritical: {
     type: Boolean,
@@ -57,7 +60,7 @@ const componentSchema = new Schema({
   },
   parts: {
     type: [PartsSchema]
-  }
+  },
 });
 
 
@@ -88,7 +91,7 @@ const partList = new Schema({
     type:Number,
   },
   partID:{
-    type:String
+    type:Object
   }
 })
 

@@ -50,13 +50,6 @@ exports.createNewOrderFromHub = async (req, res) => {
     let spoke_id = data.spoke_id
     let project_name = data.project_name
 
-    // for (let s of switchBoards) {
-    //   console.log(s.components)
-    //   for (let c of s.components) {
-    //     console.log(c.parts)
-    //   }
-    // }
-
     console.log('----------',partList)
 
     let newProjectData = {

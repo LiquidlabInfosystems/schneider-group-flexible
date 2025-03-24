@@ -767,7 +767,7 @@ exports.uploadCRExcelFromHub = async (req, res) => {
         // console.log('part details- ---------',part)
       } else {
         // console.log('part details- ---------',part)
-        acc.push({ partNumber: part.partNumber, quantity: part.quantity, description: part.partDescription, grouped: part.grouped ? true : false, PiecePerPacket: part.PiecePerPacket ? part.PiecePerPacket : 0, partID: part._id });
+        acc.push({ partNumber: part.partNumber, quantity: part.quantity, description: part.partDescription, grouped: part.grouped ? true : false, PiecePerPacket: part.PiecePerPacket ? part.PiecePerPacket : 0, partID: new mongoose.Types.ObjectId(part._id) });
       }
       // console.log('part details- ---------',acc)
       return acc;
