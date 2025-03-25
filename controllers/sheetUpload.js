@@ -699,11 +699,11 @@ exports.uploadCRExcelFromHub = async (req, res) => {
     }
 
     // console.log(missingKeys)
-    if(missingKeys.length > 0){
+    if (missingKeys.length > 0) {
       let missingInstring = "Missing Fields in the first row of the uploaded order. Remember we are looking for the first sheet of the uploaded .xlsx or .xls file. "
-      missingKeys.map((key)=>{
+      missingKeys.map((key) => {
         return (
-          missingInstring = missingInstring +", "+ key
+          missingInstring = missingInstring + ", " + key
         )
       })
       return utils.commonResponse(res, 400, "Missing Keys", missingInstring.toString());
@@ -745,13 +745,14 @@ exports.uploadCRExcelFromHub = async (req, res) => {
     const EntireCommerialRef = await CommercialReference.find();
     // console.log(CrsListFromExcel);
 
-    const CRsinCurrentOrder = CrsListFromExcel?.map(cr => cr?.Reference);
+    const CRNamesWithQuantityInOrder = CrsListFromExcel?.map(cr => ({ "Reference": cr.Reference, "Quantity": cr.Quantity }));
+    // console.log(CRNamesWithQuantityInOrder);
 
     const existingCRs = EntireCommerialRef?.map(cr => cr.referenceNumber);
     let missingCRs = [];
-    CRsinCurrentOrder?.filter(cr => {
-      if (!existingCRs.includes(cr) && !missingCRs.includes(cr)) {
-        missingCRs.push(cr);
+    CRNamesWithQuantityInOrder?.filter(cr => {
+      if (!existingCRs.includes(cr.Reference) && !missingCRs.includes(cr.Reference)) {
+        missingCRs.push(cr.Reference);
         // console.log(cr);
         return true;
       }
@@ -770,11 +771,14 @@ exports.uploadCRExcelFromHub = async (req, res) => {
     }
 
     // Map order CRs to their parts
-    const CRsWithParts = CRsinCurrentOrder.flatMap(currentRef =>
-      EntireCommerialRef.filter(entireCR => entireCR.referenceNumber === currentRef)
+    const CRsWithParts = CRNamesWithQuantityInOrder.flatMap(currentRef =>
+      EntireCommerialRef.filter(entireCR => entireCR.referenceNumber === currentRef.Reference).map((crwithpart, index) => {
+        crwithpart.quantity = currentRef.Quantity;
+        return crwithpart
+      })
     );
 
-    // console.log(CRsWithParts)
+    // console.log("cr with parts, - ", CRsWithParts)
 
     // Map switchboards to CRs with parts
     const SwitchBoardWithCRWithParts = SwitchboardListWithCrs.map(switchboard => ({
@@ -786,14 +790,20 @@ exports.uploadCRExcelFromHub = async (req, res) => {
       }))
     }));
 
-    // console.log(SwitchBoardWithCRWithParts)
+    const EntirePartList = CRsWithParts.flatMap(cr => cr.parts.map((part, key)=>{
+      part.quantity = part.quantity * cr.quantity
+      return (
+        part
+      )
+    }) || []);
 
-
-    // Generate a final list of parts with aggregated quantities
-    const EntirePartList = CRsWithParts.flatMap(cr => cr.parts || []);
     const FinalPartList = EntirePartList.reduce((acc, part) => {
+
+
       const existingPart = acc.find(item => item.partNumber === part.partNumber);
+
       if (existingPart) {
+
         existingPart.quantity += part.quantity;
         // console.log('part details- ---------',part)
       } else {

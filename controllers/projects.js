@@ -785,7 +785,7 @@ exports.shipProject = async (req, res) => {
 
 
 
-    
+
     // Step 4: Respond Based on Missing Components
     if (missingComponents.length > 0) {
       return utils.commonResponse(
@@ -996,6 +996,8 @@ exports.getProjectDetailsWithParts = async (req, res) => {
     if (!((projectDetails ?? []).length > 0)) {
       return utils.commonResponse(res, 404, "project not found");
     }
+
+    console.log(projectDetails[0])
 
     return utils.commonResponse(
       res,
