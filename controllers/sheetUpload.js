@@ -679,29 +679,56 @@ exports.uploadCRExcelFromHub = async (req, res) => {
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(worksheet); // Read as array
 
-    // let spoke_id = data.spoke_id
-    // let project_name = res.body
+    let fields = rows[0]
+    let missingKeys = []
+
+    if (!('SwitchBoard' in fields)) {
+      missingKeys.push('SwitchBoard');
+    }
+    if (!('Enclosure' in fields)) {
+      missingKeys.push('Enclosure');
+    }
+    if (!('Reference' in fields)) {
+      missingKeys.push('Reference');
+    }
+    if (!('Description' in fields)) {
+      missingKeys.push('Description');
+    }
+    if (!('Quantity' in fields)) {
+      missingKeys.push('Quantity');
+    }
+
+    // console.log(missingKeys)
+    if(missingKeys.length > 0){
+      let missingInstring = "Missing Fields in the first row of the uploaded order. Remember we are looking for the first sheet of the uploaded .xlsx or .xls file. "
+      missingKeys.map((key)=>{
+        return (
+          missingInstring = missingInstring +", "+ key
+        )
+      })
+      return utils.commonResponse(res, 400, "Missing Keys", missingInstring.toString());
+    }
 
     const switchBoards = []
     const CrsListFromExcel = rows
-    .filter(row => {
-      if (row.Enclosure && row.Enclosure.toString().toLowerCase() === "common total") {
-        switchBoards.push(row.SwitchBoard);
-      }
-      return (row.Reference !== undefined)
-    }) // Removes undefined entries
-    .map(row => ({
-      SwitchBoard: row.SwitchBoard,
-      Reference: row.Reference,
-      Enclosure: row.Enclosure,
-      referenceNumber: row.Reference,
-      compShortName: row.Reference,
-      compPartNo: row.Reference,
-      description: row.Description,
-      fixedQuantity: row.FixedQuantity,
-      Quantity: row.Quantity,
-      isCritical: row["Core / Non core"] ? row["Core / Non core"].toLowerCase() !== "non-core" : false
-    }));
+      .filter(row => {
+        if (row.Enclosure && row.Enclosure.toString().toLowerCase() === "common total") {
+          switchBoards.push(row.SwitchBoard);
+        }
+        return (row.Reference !== undefined)
+      }) // Removes undefined entries
+      .map(row => ({
+        SwitchBoard: row.SwitchBoard,
+        Reference: row.Reference,
+        Enclosure: row.Enclosure,
+        referenceNumber: row.Reference,
+        compShortName: row.Reference,
+        compPartNo: row.Reference,
+        description: row.Description,
+        fixedQuantity: row.FixedQuantity,
+        Quantity: row.Quantity,
+        isCritical: row["Core / Non core"] ? row["Core / Non core"].toLowerCase() !== "non-core" : false
+      }));
 
 
 
@@ -717,18 +744,18 @@ exports.uploadCRExcelFromHub = async (req, res) => {
     // Fetch all commercial references from the database
     const EntireCommerialRef = await CommercialReference.find();
     // console.log(CrsListFromExcel);
-    
+
     const CRsinCurrentOrder = CrsListFromExcel?.map(cr => cr?.Reference);
 
     const existingCRs = EntireCommerialRef?.map(cr => cr.referenceNumber);
     let missingCRs = [];
     CRsinCurrentOrder?.filter(cr => {
-        if (!existingCRs.includes(cr) && !missingCRs.includes(cr)) {
-            missingCRs.push(cr);
-            // console.log(cr);
-            return true;
-        }
-        return false;
+      if (!existingCRs.includes(cr) && !missingCRs.includes(cr)) {
+        missingCRs.push(cr);
+        // console.log(cr);
+        return true;
+      }
+      return false;
     });
 
     // console.log(CRsinCurrentOrder.length)
@@ -771,7 +798,7 @@ exports.uploadCRExcelFromHub = async (req, res) => {
         // console.log('part details- ---------',part)
       } else {
         // console.log('part details- ---------',part)
-        acc.push({ partNumber: part.partNumber, quantity: part.quantity, description: part.partDescription, grouped: part.grouped ? true : false, PiecePerPacket: part.PiecePerPacket ? part.PiecePerPacket : 0, partID:part.partID });
+        acc.push({ partNumber: part.partNumber, quantity: part.quantity, description: part.partDescription, grouped: part.grouped ? true : false, PiecePerPacket: part.PiecePerPacket ? part.PiecePerPacket : 0, partID: part.partID });
       }
       // console.log('part details- ---------',acc)
       return acc;
