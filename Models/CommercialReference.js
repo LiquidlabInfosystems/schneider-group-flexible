@@ -14,12 +14,12 @@ const partSchema = new Schema({
   quantity: {
     type: Number,
   },
-  grouped: {
-    type: Boolean,
-  },
-  PiecePerPacket: {
-    type: Number
-  },
+  // grouped: {
+  //   type: Boolean,
+  // },
+  // PiecePerPacket: {
+  //   type: Number
+  // },
   videoUrl: {
     type: String,
   },

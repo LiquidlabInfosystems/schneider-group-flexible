@@ -84,7 +84,7 @@ exports.generatePartSerialNo = async (req, res) => {
       );
     }
     // check the project details
-    console.log(req.body)
+    // console.log(req.body)
     let cpart
 
     if(projectId){
@@ -99,10 +99,11 @@ exports.generatePartSerialNo = async (req, res) => {
       })
     }
     else{
-      cpart = await parts.findOne({ partNumber })
+      return utils.commonResponse(res, 200, "projectId missing in the request")
+      // cpart = await parts.findOne({ partNumber })
     }
 
-    console.log(cpart)
+    // console.log(cpart)
 
     let serialNumbers
     let PiecePerPacket = []

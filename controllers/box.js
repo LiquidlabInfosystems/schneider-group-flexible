@@ -626,25 +626,28 @@ exports.addPartsToBox = async (req, res) => {
     // console.log(partID)
     let projectWithID = new mongoose.Types.ObjectId(projectID)
     let project  = await Project.findOne({_id:projectWithID})
-    // console.log(project)
+    console.log(projectID)
     let partList = project?.partList
     // console.log(partList)
     let currentpart  = {}
     let pid = ""
     partList.map((part, key)=>{
       // pid = new mongoose.Types.ObjectId(partID)
+      pid = partID
+      pidpart = part.partID;
       // pidpart =  new mongoose.Types.ObjectId(part.partID)
-      if(partID === part.partID){
-        console.log("-------match---------",part.partID, partID)
+      // console.log(pid, pidpart)
+      if(pid == pidpart){
+        // console.log("-------match---------",pidpart, pid)
 
         currentpart = part
       }
       else{
-        console.log('else-----',part.partID, partID)
+        // console.log('else-----',pidpart, pid)
       }
     })
 
-    console.log('part---------',currentpart)
+    // console.log('part---------',currentpart)
     // let currentpart = await Parts.findOne({ _id: new mongoose.Types.ObjectId(partID) })
     // console.log(currentpart.partNumber, "current part")
     let currentpartNumber = currentpart.partNumber
@@ -857,10 +860,10 @@ exports.getAllPartsInAllBoxes = async (req, res) => {
       },
     ]);
     if (allParts.length == 0) {
-      utils.commonResponse(res, 201, "no parts found");
+      return utils.commonResponse(res, 201, "no parts found");
     }
-    utils.commonResponse(res, 200, "all parts fetched successfully", allParts);
+    return utils.commonResponse(res, 200, "all parts fetched successfully", allParts);
   } catch (error) {
-    utils.commonResponse(res, 500, "unexpected server error", error.toString());
+    return utils.commonResponse(res, 500, "unexpected server error", error.toString());
   }
 };

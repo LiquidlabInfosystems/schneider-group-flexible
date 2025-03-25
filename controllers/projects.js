@@ -5,6 +5,7 @@ const Boxes = require("../Models/box");
 const ComponentSerial = require("../Models/componentSerialNo");
 const Component = require("../Models/Components");
 const Projects = require("../Models/Projects");
+const Spoke = require("../Models/Spoke");
 
 exports.getAllProjects = async (req, res) => {
   // THIS FUNCTION WILL RETURN ALL THE AVAILABLE PROJECTS IN TRACKING SYSTEM
@@ -52,9 +53,12 @@ exports.createNewOrderFromHub = async (req, res) => {
 
     console.log('----------',partList)
 
+    let spoke = await Spoke.findOne({_id:spoke_id})
+
     let newProjectData = {
       ProjectName: project_name,
       createdBy: spoke_id,
+      spokeName :spoke.spokeName,
       createdTo: hub_id,
       status: "open",
       switchBoardData: switchBoards,
@@ -576,6 +580,212 @@ exports.shipProject = async (req, res) => {
     // //console.log('Missing Components: ', missingComponents);
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
     // Step 4: Respond Based on Missing Components
     if (missingComponents.length > 0) {
       return utils.commonResponse(

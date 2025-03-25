@@ -117,6 +117,9 @@ const Projects = new Schema(
     status: {
       type: String,
     },
+    spokeName: {
+      type: String,
+    },
     switchBoardData: {
       type: [switchBoardSchema],
     },

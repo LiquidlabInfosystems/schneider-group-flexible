@@ -226,7 +226,7 @@ exports.createCR = async (req, res) => {
     if (!existingPart) {
       return utils.commonResponse(res, 404, "Part does not exist, add part first");
     }
-    let modifiedPart = { ...existingPart, partID: existingPart._id, quantity: part.quantity, grouped: part.grouped, PiecePerPacket: part.PiecePerPacket }
+    let modifiedPart = { ...existingPart, partID: existingPart._id, quantity: part.quantity }
     part_array.push(modifiedPart)
 
     const alreadyLinked = existingPart.parentIds.some(
@@ -721,11 +721,15 @@ exports.uploadCRExcelFromHub = async (req, res) => {
     const CRsinCurrentOrder = CrsListFromExcel?.map(cr => cr?.Reference);
 
     const existingCRs = EntireCommerialRef?.map(cr => cr.referenceNumber);
-
-
-    const missingCRs = CRsinCurrentOrder?.filter(cr =>
-      !existingCRs.includes(cr)
-    );
+    let missingCRs = [];
+    CRsinCurrentOrder?.filter(cr => {
+        if (!existingCRs.includes(cr) && !missingCRs.includes(cr)) {
+            missingCRs.push(cr);
+            // console.log(cr);
+            return true;
+        }
+        return false;
+    });
 
     // console.log(CRsinCurrentOrder.length)
 
@@ -767,7 +771,7 @@ exports.uploadCRExcelFromHub = async (req, res) => {
         // console.log('part details- ---------',part)
       } else {
         // console.log('part details- ---------',part)
-        acc.push({ partNumber: part.partNumber, quantity: part.quantity, description: part.partDescription, grouped: part.grouped ? true : false, PiecePerPacket: part.PiecePerPacket ? part.PiecePerPacket : 0, partID: new mongoose.Types.ObjectId(part._id) });
+        acc.push({ partNumber: part.partNumber, quantity: part.quantity, description: part.partDescription, grouped: part.grouped ? true : false, PiecePerPacket: part.PiecePerPacket ? part.PiecePerPacket : 0, partID:part.partID });
       }
       // console.log('part details- ---------',acc)
       return acc;
@@ -997,8 +1001,6 @@ exports.BulkUploadCRFromAdmin = async (req, res) => {
                 partNumber: _rowData.parts[i].partNumber,
                 partDescription: _rowData.parts[i].partDescription,
                 quantity: Number(_rowData.parts[i].quantity),
-                grouped: _rowData.parts[i].grouped,
-                PiecePerPacket: Number(_rowData.parts[i].PiecePerPacket),
                 partID: new mongoose.Types.ObjectId(newPart._id),
               }
             )
