@@ -765,7 +765,7 @@ exports.uploadCRExcelFromHub = async (req, res) => {
       return utils.commonResponse(res, 400, "Missing Commercial References", {
         error: "Some Commercial References do not exist in the database",
         missingCRs: missingCRs,
-        totalCRsInFile: CRsinCurrentOrder.length,
+        totalCRsInFile: CRNamesWithQuantityInOrder.length,
         missingCount: missingCRs.length
       });
     }
