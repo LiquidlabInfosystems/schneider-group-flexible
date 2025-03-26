@@ -712,7 +712,7 @@ exports.uploadCRExcelFromHub = async (req, res) => {
     const switchBoards = []
     const CrsListFromExcel = rows
       .filter(row => {
-        if (row.Enclosure && row.Enclosure.toString().toLowerCase() === "common total") {
+        if (row.Enclosure && row.Enclosure.toString().toLowerCase().trim() === "common total") {
           switchBoards.push(row.SwitchBoard);
         }
         return (row.Reference !== undefined)
@@ -748,10 +748,10 @@ exports.uploadCRExcelFromHub = async (req, res) => {
     const CRNamesWithQuantityInOrder = CrsListFromExcel?.map(cr => ({ "Reference": cr.Reference, "Quantity": cr.Quantity }));
     // console.log(CRNamesWithQuantityInOrder);
 
-    const existingCRs = EntireCommerialRef?.map(cr => cr.referenceNumber);
+    const existingCRs = EntireCommerialRef?.map(cr => cr.referenceNumber.toLowerCase());
     let missingCRs = [];
     CRNamesWithQuantityInOrder?.filter(cr => {
-      if (!existingCRs.includes(cr.Reference) && !missingCRs.includes(cr.Reference)) {
+      if (!existingCRs.includes(cr.Reference.toLowerCase().trim()) && !missingCRs.includes(cr.Reference.toLowerCase().trim())) {
         missingCRs.push(cr.Reference);
         // console.log(cr);
         return true;
@@ -765,14 +765,14 @@ exports.uploadCRExcelFromHub = async (req, res) => {
       return utils.commonResponse(res, 400, "Missing Commercial References", {
         error: "Some Commercial References do not exist in the database",
         missingCRs: missingCRs,
-        totalCRsInFile: CRNamesWithQuantityInOrder.length,
-        missingCount: missingCRs.length
+        totalCRsInFile: CRNamesWithQuantityInOrder?CRNamesWithQuantityInOrder.length:0,
+        missingCount: missingCRs?.length
       });
     }
 
     // Map order CRs to their parts
     const CRsWithParts = CRNamesWithQuantityInOrder.flatMap(currentRef =>
-      EntireCommerialRef.filter(entireCR => entireCR.referenceNumber === currentRef.Reference).map((crwithpart, index) => {
+      EntireCommerialRef.filter(entireCR => entireCR.referenceNumber.toLowerCase() === currentRef.Reference.toLowerCase()).map((crwithpart, index) => {
         crwithpart.quantity = currentRef.Quantity;
         return crwithpart
       })
@@ -785,8 +785,8 @@ exports.uploadCRExcelFromHub = async (req, res) => {
       ...switchboard,
       components: switchboard.components.map(cr => ({
         ...cr,
-        parts: CRsWithParts.find(innerCR => innerCR.referenceNumber === cr.Reference)?.parts || [],
-        description: CRsWithParts.find(innerCR => innerCR.referenceNumber === cr.Reference)?.description || ""
+        parts: CRsWithParts.find(innerCR => innerCR.referenceNumber.toLowerCase() === cr.Reference.toLowerCase())?.parts || [],
+        description: CRsWithParts.find(innerCR => innerCR.referenceNumber.toLowerCase() === cr.Reference.toLowerCase())?.description || ""
       }))
     }));
 
