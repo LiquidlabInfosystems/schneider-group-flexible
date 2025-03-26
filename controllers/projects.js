@@ -43,6 +43,7 @@ exports.getAllProjectsInHub = async (req, res) => {
 
 exports.createNewOrderFromHub = async (req, res) => {
   // THIS WILL CREATE A NEW PROJECT  IN THE TRACKING SYSTEM
+
   try {
     let data = req.body
     let switchBoards = data.switchBoards
@@ -51,7 +52,7 @@ exports.createNewOrderFromHub = async (req, res) => {
     let spoke_id = data.spoke_id
     let project_name = data.project_name
 
-    console.log('----------',partList)
+    console.log('----------',req.body)
 
     let spoke = await Spoke.findOne({_id:spoke_id})
 

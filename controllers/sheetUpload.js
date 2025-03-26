@@ -533,7 +533,7 @@ exports.uploadCRFromAdminPreview = async (req, res) => {
       "updatedat": ""
     }
 
-    if (row['Level'] === "0") {
+    if (row['Level'] == 0) {
 
       MotherCR['referenceNumber'] = row['Number']
       MotherCR['description'] = row['EnglishDescription']
@@ -543,7 +543,7 @@ exports.uploadCRFromAdminPreview = async (req, res) => {
     // console.log(CRData)
 
 
-    else if (["2", "3", "4", "5"].includes(row['Level'])) {
+    else if ([2, 3, 4, 5].includes(Number(row['Level']))) {
       NoOfLoadedCR = CRData.length
       if (NoOfLoadedCR > 0) {
         // console.log(CRData[NoOfLoadedCR-1])
@@ -742,7 +742,7 @@ exports.uploadCRExcelFromHub = async (req, res) => {
     // console.log(SwitchboardListWithCrs)
 
     // Fetch all commercial references from the database
-    const EntireCommerialRef = await CommercialReference.find();
+    const EntireCommerialRef = await CommercialReference.find().lean()
     // console.log(CrsListFromExcel);
 
     const CRNamesWithQuantityInOrder = CrsListFromExcel?.map(cr => ({ "Reference": cr.Reference, "Quantity": cr.Quantity }));
@@ -1002,8 +1002,8 @@ exports.BulkUploadCRFromAdmin = async (req, res) => {
       }
       // console.log("Uploading Reference : ",_rowData.referenceNumber)
       if (existingCR) {
-        ExistingCRList.push(_rowData);
-        // console.log("Skipping Reference :", _rowData.referenceNumber)
+        ExistingCRList.push(_rowData); 
+        return
       }
       else {
 
@@ -1011,8 +1011,16 @@ exports.BulkUploadCRFromAdmin = async (req, res) => {
         // console.log("Creating Reference : ",_rowData.referenceNumber)
         for (let i = 0; i < _rowData.parts.length; i++) {
           const partnumber = _rowData.parts[i].partNumber;
-          const existingPart = await Parts.findOne({ partNumber: partnumber });
+          const existingPart = await Parts.findOne({ partNumber: partnumber }); 
           if (existingPart) {
+            _parts.push(
+              {
+                partNumber: _rowData.parts[i].partNumber,
+                partDescription: _rowData.parts[i].partDescription,
+                quantity: Number(_rowData.parts[i].quantity),
+                partID: new mongoose.Types.ObjectId(existingPart._id),
+              }
+            )
             existingPart.parentIds.push({
               productNumber: "",
               crNumber: _rowData.referenceNumber,
@@ -1030,9 +1038,7 @@ exports.BulkUploadCRFromAdmin = async (req, res) => {
                   crNumber: _rowData.referenceNumber,
                 },
               ],
-            });
-
-            // load part list
+            }); 
             _parts.push(
               {
                 partNumber: _rowData.parts[i].partNumber,
@@ -1041,17 +1047,21 @@ exports.BulkUploadCRFromAdmin = async (req, res) => {
                 partID: new mongoose.Types.ObjectId(newPart._id),
               }
             )
-
-
           }
+          
         }
 
+        
         // CREATE CR in db
         await CommercialReference.create({
           referenceNumber: _rowData.referenceNumber,
           description: _rowData.description,
-          parts: _parts
+          parts: _parts,
+          quantity: 0,
+          isActive: true,
         });
+
+        newCRsList.push(_rowData)
 
       }
     });
