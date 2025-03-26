@@ -606,27 +606,27 @@ exports.updateBoxStatus = async (req, res) => {
 
 
 // NOT USING
-function calculatePackets(requiredQuantity, maxPerPacket) {
-  const packets = [];
-  let remainingQuantity = requiredQuantity;
-  while (remainingQuantity > 0) {
-    const quantityInPacket = Math.min(remainingQuantity, maxPerPacket);
-    packets.push(quantityInPacket);
-    remainingQuantity -= quantityInPacket;
-  }
-  return packets;
-}
+// function calculatePackets(requiredQuantity, maxPerPacket) {
+//   const packets = [];
+//   let remainingQuantity = requiredQuantity;
+//   while (remainingQuantity > 0) {
+//     const quantityInPacket = Math.min(remainingQuantity, maxPerPacket);
+//     packets.push(quantityInPacket);
+//     remainingQuantity -= quantityInPacket;
+//   }
+//   return packets;
+// }
 
 
 // HELPS IN ADDING PART TO BOX
 exports.addPartsToBox = async (req, res) => {
   try {
     // console.log('addpart', req.body)
-    const { hubID, partID, boxSerialNo, projectID, partSerialNumber, qty } = req.body;
+    const { hubID, partID, boxSerialNo, projectID, partSerialNumber } = req.body;
     // console.log(partID)
     let projectWithID = new mongoose.Types.ObjectId(projectID)
     let project  = await Project.findOne({_id:projectWithID})
-    console.log(projectID)
+    // console.log(partSerialNumber)
     let partList = project?.partList
     // console.log(partList)
     let currentpart  = {}
@@ -651,6 +651,8 @@ exports.addPartsToBox = async (req, res) => {
     // let currentpart = await Parts.findOne({ _id: new mongoose.Types.ObjectId(partID) })
     // console.log(currentpart.partNumber, "current part")
     let currentpartNumber = currentpart.partNumber
+    console.log(partSerialNumber);
+    
     let hubIDasObject = new mongoose.Types.ObjectId(hubID)
     // console.log(currentpartNumber, hubIDasObject, partSerialNumber)
     if (!hubID || !partID || !boxSerialNo || !projectID || !partSerialNumber) {
@@ -691,9 +693,10 @@ exports.addPartsToBox = async (req, res) => {
     }
     // Add the part to the box or update its quantity and serial numbers
     const existingComponent = box.components.find(comp => comp.componentID?.equals(partID));
+    console.log("current part ",currentpart)
     if (existingComponent) {
       existingComponent.componentSerialNo.push(partSerialNumber);
-      console.log(currentpart)
+  
       if (currentpart.grouped) {
         let item = await Partserialinfo.findOne({ serial_no: partSerialNumber })
         existingComponent.quantity += item.qty;
@@ -740,7 +743,7 @@ exports.addPartsToBox = async (req, res) => {
     // Save the box and respond
     if (currentpart.grouped) {
       let item = await Partserialinfo.findOne({ serial_no: partSerialNumber })
-      console.log("item", item.qty)
+      // console.log("item", item.qty)
       box.quantity += item.qty;
     }
     else {
@@ -862,6 +865,7 @@ exports.getAllPartsInAllBoxes = async (req, res) => {
     if (allParts.length == 0) {
       return utils.commonResponse(res, 201, "no parts found");
     }
+    // console.log("all parts in box, ",allParts)
     return utils.commonResponse(res, 200, "all parts fetched successfully", allParts);
   } catch (error) {
     return utils.commonResponse(res, 500, "unexpected server error", error.toString());

@@ -72,6 +72,7 @@ exports.generateComponentSerialNo = async (req, res) => {
   }
 };
 
+
 exports.generatePartSerialNo = async (req, res) => {
   // THIS FUNCTION WILL GENERATE SERIAL NUMBER FOR PARTS
   try {
@@ -83,34 +84,29 @@ exports.generatePartSerialNo = async (req, res) => {
         "Required Quantity (qnty) , hubID, partNumber"
       );
     }
-    // check the project details
-    // console.log(req.body)
-    let cpart
+    let scannedPart
 
-    if(projectId){
+    if (projectId) {
       console.log("searching for part in project")
       let project_id = new mongoose.Types.ObjectId(projectId)
-      let project = await Projects.findOne({_id:project_id})
+      let project = await Projects.findOne({ _id: project_id })
       let partList = project.partList
-      partList.forEach((part, key)=>{
-        if(part.partNumber == partNumber){
-          cpart = part
-        }
-      })
+      scannedPart = partList.find(part => part.partNumber === partNumber);
+      if (scannedPart.length === 0) {
+        return utils.commonResponse(res, 200, "part not in this current project")
+      }
     }
-    else{
+    else {
       return utils.commonResponse(res, 200, "projectId missing in the request")
-      // cpart = await parts.findOne({ partNumber })
     }
-
-    // console.log(cpart)
 
     let serialNumbers
     let PiecePerPacket = []
     let grouped = false
-    if (cpart.grouped) {
+
+    if (scannedPart.grouped) {
       const requiredQuantity = qnty;
-      const maxPerPacket = cpart.PiecePerPacket;
+      const maxPerPacket = scannedPart.PiecePerPacket;
       const packets = calculatePackets(requiredQuantity, maxPerPacket);
       PiecePerPacket = packets
       grouped = true
@@ -130,13 +126,13 @@ exports.generatePartSerialNo = async (req, res) => {
       const hubEntry = partSerialRecord.hubSerialNo.find(
         (entry) => entry.hubId === hubIDasObject
       );
-      console.log(hubIDasObject, partID, hubEntry)
+      // console.log(hubIDasObject, partID, hubEntry)
       // loop to serial number and create partserialinfo
 
       for (let i = 0; i < serialNumbers.length; i++) {
         const serial = serialNumbers[i];
         const qty = PiecePerPacket[i];
-        console.log(serial, qty)
+        // console.log(serial, qty)
         await Partserialinfo.create({ serial_no: serial, qty }); // Await the creation
       }
 

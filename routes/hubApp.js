@@ -7,6 +7,7 @@ const PartsController = require("../controllers/parts");
 const sheetController = require("../controllers/sheetUpload");
 const SpokeController = require("../controllers/spoke");
 const hubs = require("../controllers/hubs");
+const ReportController = require("../controllers/ReportController")
 const multer = require('multer');
 const verifyToken = require("../Middleware");
 const fs = require('fs')
@@ -46,6 +47,8 @@ router.post(
   serialNoController.generateComponentSerialNo
 );
 
+// REPORT RELATED REQUESTS
+router.post("/generateProjectStatusReport", verifyToken,ReportController.generateProjectStatusReport)
 
 // ORDER RELATED REQUESTS
 router.post("/uploadCRExcelFromHub",verifyToken, upload.single("file"), sheetController.uploadCRExcelFromHub);

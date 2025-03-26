@@ -997,7 +997,7 @@ exports.getProjectDetailsWithParts = async (req, res) => {
       return utils.commonResponse(res, 404, "project not found");
     }
 
-    console.log(projectDetails[0])
+    // console.log(projectDetails[0])
 
     return utils.commonResponse(
       res,

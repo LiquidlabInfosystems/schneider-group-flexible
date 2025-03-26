@@ -563,7 +563,7 @@ exports.uploadCRFromAdminPreview = async (req, res) => {
   })
 
 
-  console.log(CRData)
+  // console.log(CRData)
 
 
 
@@ -581,7 +581,7 @@ exports.uploadCRFromAdminPreview = async (req, res) => {
 exports.uploadCRFromAdmin = async (req, res) => {
   // THIS FUNCTION WILL HELP TO CREATE NEW BOM RECORDS FROM THE BOM FILE THAT IS UPLOADING FROM THE ADMIN SIDE
   try {
-    console.log(req.body.file)
+    // console.log(req.body.file)
     if (!req.file) {
       return res.status(400).send("No file uploaded.");
     }
@@ -732,7 +732,7 @@ exports.uploadCRExcelFromHub = async (req, res) => {
 
 
 
-    console.log(switchBoards)
+    // console.log(switchBoards)
     // Group CRs by switchboard
     const SwitchboardListWithCrs = switchBoards?.map(switchBoard => ({
       switchBoard,
