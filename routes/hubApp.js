@@ -56,6 +56,11 @@ router.post("/createNewOrderFromHub",verifyToken, ProjectController.createNewOrd
 
 // SERIAL NUMBER REQUESTS
 router.post("/generatePartSerialNo",verifyToken, serialNoController.generatePartSerialNo);
+router.post("/savePartPackingMethod",verifyToken, serialNoController.savePartPackingMethod);
+router.post("/generatePacketSerialNo",verifyToken, serialNoController.generatePacketSerialNo);
+router.post("/updatePacketQty",verifyToken, serialNoController.updatePacketQty);
+router.post("/removePacketSerialNo",verifyToken, serialNoController.removePacketSerialNo);
+router.post("/getAllPacketsInProject",verifyToken, serialNoController.getAllPacketsInProject);
 router.post("/generatePanelSerialNo",verifyToken, serialNoController.generatePanelSerialNo);
 router.post("/generateBoxSerialNo",verifyToken, BoxSerialNoController.generateBoxSerialNo);
 

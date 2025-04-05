@@ -14,13 +14,13 @@ const PartsSchema = new Schema({
   quantity: {
     type: Number,
   },
-  grouped: {
-    default:false,
-    type: Boolean,
-  },
-  PiecePerPacket: {
-    type: Number
-  },
+  // grouped: {
+  //   default:false,
+  //   type: Boolean,
+  // },
+  // PiecePerPacket: {
+  //   type: Number
+  // },
   partID : {
     type: Object,
   },
@@ -88,7 +88,10 @@ const partList = new Schema({
     type:Boolean,
   },
   PiecePerPacket:{
-    type:Number,
+    type:Array,
+  },
+  scannedStatusOfPacket:{
+    type:Array,
   },
   partID:{
     type:Object

@@ -621,49 +621,31 @@ exports.updateBoxStatus = async (req, res) => {
 // HELPS IN ADDING PART TO BOX
 exports.addPartsToBox = async (req, res) => {
   try {
-    // console.log('addpart', req.body)
     const { hubID, partID, boxSerialNo, projectID, partSerialNumber } = req.body;
-    // console.log(partID)
     let projectWithID = new mongoose.Types.ObjectId(projectID)
-    let project  = await Project.findOne({_id:projectWithID})
-    // console.log(partSerialNumber)
+    let project = await Project.findOne({ _id: projectWithID })
     let partList = project?.partList
-    // console.log(partList)
-    let currentpart  = {}
+    let currentpartinpartlist = {}
     let pid = ""
-    partList.map((part, key)=>{
-      // pid = new mongoose.Types.ObjectId(partID)
+    partList.map((part, key) => {
       pid = partID
       pidpart = part.partID;
-      // pidpart =  new mongoose.Types.ObjectId(part.partID)
-      // console.log(pid, pidpart)
-      if(pid == pidpart){
-        // console.log("-------match---------",pidpart, pid)
-
-        currentpart = part
-      }
-      else{
-        // console.log('else-----',pidpart, pid)
+      if (pid == pidpart) {
+        currentpartinpartlist = part
       }
     })
-
-    // console.log('part---------',currentpart)
-    // let currentpart = await Parts.findOne({ _id: new mongoose.Types.ObjectId(partID) })
-    // console.log(currentpart.partNumber, "current part")
-    let currentpartNumber = currentpart.partNumber
-    console.log(partSerialNumber);
-    
+    let currentpartNumber = currentpartinpartlist.partNumber
+    let grouped = currentpartinpartlist.grouped
     let hubIDasObject = new mongoose.Types.ObjectId(hubID)
-    // console.log(currentpartNumber, hubIDasObject, partSerialNumber)
     if (!hubID || !partID || !boxSerialNo || !projectID || !partSerialNumber) {
       return utils.commonResponse(res, 400, "Invalid input parameters");
     }
-    const [part, box, hub] = await Promise.all([
-      Parts.findById(partID),
+    const [box, hub] = await Promise.all([
+      // Parts.findById(partID),
       Boxes.findOne({ serialNo: boxSerialNo, projectId: projectID }),
       Hub.findById(hubID),
     ]);
-    if (!part) return utils.commonResponse(res, 404, "Part ID not found");
+    // if (!part) return utils.commonResponse(res, 404, "Part ID not found");
     if (!box) return utils.commonResponse(res, 404, "Box serial number not found");
     if (!hub) return utils.commonResponse(res, 404, "Hub ID not found");
     const isSerialValid = await PartsSerialNo.exists({
@@ -691,57 +673,94 @@ exports.addPartsToBox = async (req, res) => {
         "Serial number already exists for this Part in the box"
       );
     }
-    // Add the part to the box or update its quantity and serial numbers
-    const existingComponent = box.components.find(comp => comp.componentID?.equals(partID));
-    console.log("current part ",currentpart)
-    if (existingComponent) {
-      existingComponent.componentSerialNo.push(partSerialNumber);
-  
-      if (currentpart.grouped) {
-        let item = await Partserialinfo.findOne({ serial_no: partSerialNumber })
-        existingComponent.quantity += item.qty;
+
+
+    async function calculateTotalQuantity(box, currentpartNumber) {
+      let currentScannedPlusExtistingQuanity = 0;
+      for (const part of box.components) {
+        if (part.componentName === currentpartNumber) {
+          for (const partSerialNo of part.componentSerialNo) {
+            const item = await Partserialinfo.findOne({ serial_no: partSerialNo });
+            if (item && item.qty) {
+              currentScannedPlusExtistingQuanity += item.qty;
+            }
+          }
+        }
       }
-      else {
-        existingComponent.quantity += 1;
-      }
+      return currentScannedPlusExtistingQuanity;
     }
-    else {
-      if (currentpart.grouped) {
-        let item = await Partserialinfo.findOne({ serial_no: partSerialNumber })
-        box.components.push({
-          componentID: partID,
-          componentName: part.partNumber,
-          componentSerialNo: [partSerialNumber],
-          quantity: parseInt(item.qty),
-        });
-      }
-      else {
-        box.components.push({
-          componentID: partID,
-          componentName: part.partNumber,
-          componentSerialNo: [partSerialNumber],
-          quantity: 1,
-        });
-      }
-    }
-    // Check if the total quantity exceeds the allowed limit
-    const totalComponentsQuantity = await Boxes.aggregate([
-      { $match: { projectId: new mongoose.Types.ObjectId(projectID) } },
-      { $unwind: "$components" },
-      { $match: { "components.componentID": new mongoose.Types.ObjectId(partID) } },
-      { $group: { _id: "$components.componentID", totalQuantity: { $sum: "$components.quantity" } } },
-    ]);
-    const totalQuantity = totalComponentsQuantity.length > 0 ? totalComponentsQuantity[0].totalQuantity : 0;
-    const isExceed = await checkComponentQuntityExceeded(totalQuantity, part.partNumber, projectID);
-    if (isExceed) {
+
+    let ExtistingQuanityOfPartinBBox = await calculateTotalQuantity(box, currentpartNumber)
+    const item = await Partserialinfo.findOne({ serial_no: partSerialNumber });
+    // console.log(ExtistingQuanityOfPartinBBox + item.qty , currentpartinpartlist.quantity)
+
+    if (ExtistingQuanityOfPartinBBox + item.qty  > currentpartinpartlist.quantity) {
       return utils.commonResponse(
         res,
         201,
-        "The ordered quantity of this item has been added to the box."
+        `The Quantity of this part will be more that the ordered Quantity if you add this part. Pending Quantity is Only ${currentpartinpartlist.quantity - ExtistingQuanityOfPartinBBox } and you are trying to add ${item.qty}`
       );
     }
+
+    console.log(item.qty, currentpartinpartlist.PiecePerPacket);
+    
+    if (!currentpartinpartlist.PiecePerPacket.includes(item.qty)){
+      return utils.commonResponse(
+        res,
+        201,
+        `There is no packet with the quantity ${item.qty} setup in this part of this project. please update your part configuration or scan the packet where quantity is in ${currentpartinpartlist.PiecePerPacket}`
+      );
+    }
+    // Add the part to the box or update its quantity and serial numbers
+    const existingComponent = box.components.find(comp => comp.componentID?.equals(partID));
+    // console.log("current part ",currentpartinpartlist)
+    let scannedpartqty = 0
+    if (existingComponent) {
+      existingComponent.componentSerialNo.push(partSerialNumber);
+      if (grouped) {
+        let item = await Partserialinfo.findOne({ serial_no: partSerialNumber })
+        existingComponent.quantity += item.qty;
+        scannedpartqty = item.qty
+        let indexofScannedpart = currentpartinpartlist.PiecePerPacket.findIndex(itemqty=> itemqty == item.qty)
+        currentpartinpartlist.scannedStatusOfPacket[indexofScannedpart] = true
+        // currentpartinpartlist.save()
+        console.log(indexofScannedpart, currentpartinpartlist)
+        project.partList = project.partList.map(part => 
+          part._id.toString() === currentpartinpartlist._id.toString() 
+            ? currentpartinpartlist 
+            : part)
+        project.save()
+
+      }
+      else {
+        existingComponent.quantity += 1;
+        scannedpartqty = 1
+      }
+    }
+    else {
+      if (grouped) {
+        let item = await Partserialinfo.findOne({ serial_no: partSerialNumber })
+        scannedpartqty = item.qty
+        box.components.push({
+          componentID: partID,
+          componentName: currentpartNumber,
+          componentSerialNo: [partSerialNumber],
+          quantity: item.qty,
+        });
+      }
+      else {
+        box.components.push({
+          componentID: partID,
+          componentName: currentpartNumber,
+          componentSerialNo: [partSerialNumber],
+          quantity: 1,
+        });
+        scannedpartqty = 1
+      }
+    }
+
     // Save the box and respond
-    if (currentpart.grouped) {
+    if (grouped) {
       let item = await Partserialinfo.findOne({ serial_no: partSerialNumber })
       // console.log("item", item.qty)
       box.quantity += item.qty;
@@ -750,10 +769,14 @@ exports.addPartsToBox = async (req, res) => {
       box.quantity += 1;
     }
     await box.save();
+    // send the added and remaining quantity of this part
     return utils.commonResponse(res, 200, "Part added to box successfully", {
       boxid: box._id,
       totalParts: box.quantity,
-      part:part,
+      requiredQuantity: currentpartinpartlist.quantity,
+      addedQuantity: scannedpartqty,
+      remainingQuantity: currentpartinpartlist.quantity - box.quantity,
+      part: currentpartinpartlist,
     });
 
   } catch (error) {

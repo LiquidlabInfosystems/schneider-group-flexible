@@ -10,6 +10,15 @@ let Partsserialinfo = new Schema({
   qty: {
     type: Number,
   },
+  projectId:{
+    type: Object,
+  },
+  partNumber:{
+    type:String
+  },
+  hubID:{
+    type:String
+  }
 });
 
 // EXPORTING PARTSERIALINFO

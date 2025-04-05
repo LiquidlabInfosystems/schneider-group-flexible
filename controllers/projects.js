@@ -6,6 +6,9 @@ const ComponentSerial = require("../Models/componentSerialNo");
 const Component = require("../Models/Components");
 const Projects = require("../Models/Projects");
 const Spoke = require("../Models/Spoke");
+const Partserialinfo = require("../Models/Partserialinfo");
+
+
 
 exports.getAllProjects = async (req, res) => {
   // THIS FUNCTION WILL RETURN ALL THE AVAILABLE PROJECTS IN TRACKING SYSTEM
@@ -21,12 +24,13 @@ exports.getAllProjects = async (req, res) => {
   } catch (error) {
     utils.commonResponse(res, 500, "Unexpected server error", error.toString());
   }
-
 };
+
+
+
 exports.getAllProjectsInHub = async (req, res) => {
   // THIS FUNCTION WILL RETURN ALL THE AVAILABLE PROJECTS IN TRACKING SYSTEM
   try {
-
     let { hub_id } = req.body
     let projects = await Projects.find({ createdTo: new mongoose.Types.ObjectId(hub_id) })
 
@@ -41,9 +45,10 @@ exports.getAllProjectsInHub = async (req, res) => {
   }
 };
 
+
+
 exports.createNewOrderFromHub = async (req, res) => {
   // THIS WILL CREATE A NEW PROJECT  IN THE TRACKING SYSTEM
-
   try {
     let data = req.body
     let switchBoards = data.switchBoards
@@ -51,27 +56,24 @@ exports.createNewOrderFromHub = async (req, res) => {
     let hub_id = data.hub_id
     let spoke_id = data.spoke_id
     let project_name = data.project_name
-
-    console.log('----------',req.body)
-
-    let spoke = await Spoke.findOne({_id:spoke_id})
-
+    let spoke = await Spoke.findOne({ _id: spoke_id })
     let newProjectData = {
       ProjectName: project_name,
       createdBy: spoke_id,
-      spokeName :spoke.spokeName,
+      spokeName: spoke.spokeName,
       createdTo: hub_id,
       status: "open",
       switchBoardData: switchBoards,
-      partList:partList,
+      partList: partList,
     }
-
     await Projects.create(newProjectData);
     utils.commonResponse(res, 200, "success", {});
   } catch (error) {
     utils.commonResponse(res, 500, "Unexpected server error", error.toString());
   }
 };
+
+
 
 
 exports.getOpenProjects = async (req, res) => {
@@ -387,72 +389,109 @@ exports.getSpokeProjectsDetails = async (req, res) => {
 
 exports.getPendingPartsDetails = async (req, res) => {
   let { project_id } = req.body
-  if (project == undefined) {
+  let missingFields = []
+  if (!project_id) missingFields.push("project_id");
+  if (missingFields.length > 0) {
     return utils.commonResponse(
       res,
-      404,
-      "Project ID does not exist"
+      400,
+      `Required: ${missingFields.join(", ")}`
     );
   }
 
   // get the project
   let project = await Projects.findById(new mongoose.Types.ObjectId(project_id))
-  // get the box id's
-  let box_serials = project.boxSerialNumbers
-  let shippedparts = []
-  // // get all parts in each box
-  for (const serial of box_serials) {
-    let box = await Boxes.findOne({ serialNo: serial });
-    if (box) {
-      let parts = box.components;
-      // console.log('parts', parts);
-      parts.forEach((part) => {
-        // console.log(part.componentName);
-        shippedparts.push(part.partNumber);
+  if (!project) {
+    return utils.commonResponse(
+      res,
+      400,
+      `Invalid project ID`
+    );
+  }
+  const getShippedParts = async (project) => {
+    try {
+      // Use a Map to aggregate quantities by partNumber
+      const partsMap = new Map();
+
+      // Handle all box lookups
+      await Promise.all(
+        project.boxSerialNumbers.map(async (serial) => {
+          const box = await Boxes.findOne({ serialNo: serial });
+          if (box && box.components?.length > 0) {
+            await Promise.all(
+              box.components.map(async (part) => {
+                if (part.componentSerialNo?.length > 0) {
+                  await Promise.all(
+                    part.componentSerialNo.map(async (partserial) => {
+                      const item = await Partserialinfo.findOne({ serial_no: partserial });
+                      if (item) {
+                        // Add or update quantity in the Map
+                        const existingQty = partsMap.get(item.partNumber) || 0;
+                        partsMap.set(item.partNumber, existingQty + item.qty);
+                      }
+                    })
+                  );
+                }
+              })
+            );
+          }
+        })
+      );
+
+      // Convert Map to array of objects
+      const shippedParts = Array.from(partsMap, ([partNumber, qty]) => ({
+        partNumber,
+        qty
+      }));
+
+      console.log('Shipped Parts:', shippedParts);
+      return shippedParts;
+    } catch (error) {
+      console.error(`Error getting shipped parts: ${error.message}`);
+      return [];
+    }
+  };
+
+  const shippedParts = await getShippedParts(project);
+  // console.log(shippedParts)
+  let projectRequiredParts = project.partList
+
+
+  const getPendingParts = (shippedParts, projectRequiredParts) => {
+    try {
+      // Create a map of shipped parts for efficient lookup
+      const shippedPartsMap = new Map();
+      shippedParts.forEach(part => {
+        shippedPartsMap.set(part.partNumber, part.qty);
       });
+
+
+      // Calculate pending parts
+      const pendingParts = [];
+      projectRequiredParts.forEach(requiredPart => {
+        const shippedQty = shippedPartsMap.get(requiredPart.partNumber) || 0;
+        const pendingQty = requiredPart.quantity - shippedQty;
+        // console.log(requiredPart)
+
+        if (pendingQty > 0) {
+          pendingParts.push({
+            partNumber: requiredPart.partNumber,
+            qty: pendingQty
+          });
+        }
+      });
+      return pendingParts;
+    } catch (error) {
+      console.error(`Error calculating pending parts: ${error.message}`);
+      return [];
     }
-  }
+  };
 
+  // console.log((getPendingParts));
 
-  let switchBoards = project.switchBoardData
+  let pendingPartList = getPendingParts(shippedParts, projectRequiredParts)
 
-  let partList = []
-  for (let switchBoard of switchBoards) {
-    for (let component of switchBoard.components) {
-      for (let part of component.parts) {
-        partList.push(part);
-      }
-    }
-  }
-
-  let finalPartList = [];
-
-  for (let part of partList) {
-    let existingPart = finalPartList.find(p => p.partNumber === part.partNumber);
-
-
-    if (existingPart) {
-      // If part exists in finalPartList, increment its quantity
-      existingPart.quantity += part.quantity;
-
-    } else {
-      // If part doesn't exist, add it to finalPartList
-      finalPartList.push(part); // Create a copy to avoid reference issues
-    }
-  }
-
-  let pendingPartList =  []
-
-  shippedDetails.map((part,key)=>{
-    finalPartList.map((innerpart, key)=>{
-      if(innerpart.partNumber == part.partNumber){
-        pendingPartList.push(partNumber)
-      }
-    })
-  })
-
-
-  utils.commonResponse(res, 200, "Projects fetched successfully", shippedDetails, pendingPartList);
+  utils.commonResponse(res, 200, { shippedParts, pendingPartList }, "Pending part Details fetched successfully");
 
 }
 
@@ -956,8 +995,8 @@ exports.getProjectDetailsWithParts = async (req, res) => {
           components: {
             $push: "$switchBoardData.components",
           },
-          partList : {
-            $first :"$partList"
+          partList: {
+            $first: "$partList"
           }
         },
       },
@@ -988,8 +1027,8 @@ exports.getProjectDetailsWithParts = async (req, res) => {
           boxes: {
             $first: "$boxes",
           },
-          partList:{
-            $first:"$partList"
+          partList: {
+            $first: "$partList"
           }
         },
       },
@@ -1013,10 +1052,10 @@ exports.getProjectDetailsWithParts = async (req, res) => {
 
 
 
-exports.updateProjectPartList = async(req, res)=>{
+exports.updateProjectPartList = async (req, res) => {
   // console.log(req.body)
-  let project_id  = req.body?.projectId
-  let part_list  = req.body?.partList
+  let project_id = req.body?.projectId
+  let part_list = req.body?.partList
 
   let pid = new mongoose.Types.ObjectId(project_id)
   // console.log(pid)

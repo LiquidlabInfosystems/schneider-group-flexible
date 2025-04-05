@@ -808,7 +808,7 @@ exports.uploadCRExcelFromHub = async (req, res) => {
         // console.log('part details- ---------',part)
       } else {
         // console.log('part details- ---------',part)
-        acc.push({ partNumber: part.partNumber, quantity: part.quantity, description: part.partDescription, grouped: part.grouped ? true : false, PiecePerPacket: part.PiecePerPacket ? part.PiecePerPacket : 0, partID: part.partID });
+        acc.push({ partNumber: part.partNumber, quantity: part.quantity, description: part.partDescription, grouped: part.grouped ? true : false, PiecePerPacket: part.PiecePerPacket ? part.PiecePerPacket : [],scannedStatusOfPacket:part.scannedStatusOfPacket? part.scannedStatusOfPacket:[], partID: part._id });
       }
       // console.log('part details- ---------',acc)
       return acc;
