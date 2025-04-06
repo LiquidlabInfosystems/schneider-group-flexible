@@ -1,7 +1,7 @@
 const componentSerialNo = require("../Models/componentSerialNo.js");
 const partSerialNo = require("../Models/PartsSerialNo.js");
 const parts = require("../Models/Parts.js");
-const panelSerialNo = require("../Models/panelSerialNo");
+// const panelSerialNo = require("../Models/panelSerialNo");
 const Components = require("../Models/Components");
 const Panels = require("../Models/Panels");
 const utils = require("../controllers/utils");
@@ -372,6 +372,8 @@ exports.savePartPackingMethod = async (req, res) => {
   // THIS FUNCTION WILL GENERATE SERIAL NUMBER FOR PARTS
   try {
     const { hubID, partID, partNumber, projectId, PiecePerPacket, grouped } = req.body;
+    console.log(hubID,partNumber, projectId, PiecePerPacket, grouped );
+    
     let scannedPart
     let serialNumbers
     let partList
@@ -653,7 +655,8 @@ exports.generatePacketSerialNo = async (req, res) => {
       partNumber,
       partDescription: scannedPart.description,
       qnty: qty,
-      serialNo: serialNumbers,
+      grouped:serialNumbers.length>0?true:false,
+      serialNos: serialNumbers,
     });
   } catch (error) {
     console.error("Error generating part serial number:", error);
@@ -663,46 +666,46 @@ exports.generatePacketSerialNo = async (req, res) => {
 
 
 
-exports.generatePanelSerialNo = async (req, res) => {
-  try {
-    const { hubID, panelID, qnty } = req.body;
-    const arr1 = new Array(qnty).fill(0).map((x) => shortid.generate(6));
-    panelSerialNo
-      .findOneAndUpdate(
-        {
-          panelID: panelID,
-          hubSerialNo: {
-            $elemMatch: {
-              hubID: hubID,
-            },
-          },
-        },
-        {
-          $inc: { "hubSerialNo.$.serialNo": qnty },
-          $push: { "hubSerialNo.$.serialNos": { $each: arr1 } },
-        },
-        { returnNewDocument: true }
-      )
-      .then(async (panelSerial) => {
-        if (!panelSerial) {
-          await panelSerialNo.findOneAndUpdate(
-            { panelID: panelID },
-            {
-              $push: {
-                hubSerialNo: { hubID: hubID, serialNo: qnty, serialNos: arr1 },
-              },
-            }
-          );
-        }
+// exports.generatePanelSerialNo = async (req, res) => {
+//   try {
+//     const { hubID, panelID, qnty } = req.body;
+//     const arr1 = new Array(qnty).fill(0).map((x) => shortid.generate(6));
+//     panelSerialNo
+//       .findOneAndUpdate(
+//         {
+//           panelID: panelID,
+//           hubSerialNo: {
+//             $elemMatch: {
+//               hubID: hubID,
+//             },
+//           },
+//         },
+//         {
+//           $inc: { "hubSerialNo.$.serialNo": qnty },
+//           $push: { "hubSerialNo.$.serialNos": { $each: arr1 } },
+//         },
+//         { returnNewDocument: true }
+//       )
+//       .then(async (panelSerial) => {
+//         if (!panelSerial) {
+//           await panelSerialNo.findOneAndUpdate(
+//             { panelID: panelID },
+//             {
+//               $push: {
+//                 hubSerialNo: { hubID: hubID, serialNo: qnty, serialNos: arr1 },
+//               },
+//             }
+//           );
+//         }
 
-        panel = await Panels.findById(panelID);
-        utils.commonResponse(res, 200, "Panel serial number generated", {
-          hubID: hubID,
-          panelID: panelID,
-          serialNos: arr1,
-        });
-      });
-  } catch (error) {
-    utils.commonResponse(res, 500, "Unexpected server error", error.toString());
-  }
-};
+//         panel = await Panels.findById(panelID);
+//         utils.commonResponse(res, 200, "Panel serial number generated", {
+//           hubID: hubID,
+//           panelID: panelID,
+//           serialNos: arr1,
+//         });
+//       });
+//   } catch (error) {
+//     utils.commonResponse(res, 500, "Unexpected server error", error.toString());
+//   }
+// };

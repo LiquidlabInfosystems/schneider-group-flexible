@@ -12,7 +12,7 @@ const ComponentSerialNo = require("../Models/componentSerialNo");
 const PartsSerialNo = require("../Models/PartsSerialNo");
 const XLSX = require('xlsx');
 const CommercialReference = require("../Models/CommercialReference");
-const Products = require("../Models/Products");
+// const Products = require("../Models/Products");
 const Parts = require("../Models/Parts");
 const mongoose = require("mongoose");
 const promise = require("bluebird/js/release/promise");
@@ -49,6 +49,8 @@ async function getUniqueParts(partsList) {
   return partMap;
 }
 
+
+
 async function updatePartsIDs(newItems, partNumber) {
   try {
     const part = await Parts.findOne({ partNumber: partNumber });
@@ -76,6 +78,8 @@ async function updatePartsIDs(newItems, partNumber) {
     console.log("error: ", error);
   }
 }
+
+
 
 exports.createPOFromGoogleSheet = async (req, res) => {
   // THIS FUNCTION WILL CREATE ORDER / PROJECT FROM THE GOOGLE SHEET
@@ -203,15 +207,14 @@ exports.createPOFromGoogleSheet = async (req, res) => {
   }
 };
 
+
+
 exports.createCR = async (req, res) => {
   // THIS FUNCTION WILL HELP TO CREATE CR WITH PARTS 
   let newCR = {
     referenceNumber: req.body.referenceNumber?.toString().toUpperCase(),
     description: req.body.description,
     productNumber: req.body.productNumber,
-    // [
-    // part1:{partNumber:"",quantity:"", isgrouped:"",PiecePerPacket : ""}
-    // ]
     parts: req.body.parts
   }
   let part_array = []
@@ -253,6 +256,8 @@ exports.createCR = async (req, res) => {
   })
 }
 
+
+
 exports.deleteCR = async (req, res) => {
   // THIS FUNCTION WILL DELETE CR FROM 
   let { referenceNumber } = req.body
@@ -267,6 +272,8 @@ exports.deleteCR = async (req, res) => {
     })
   }
 }
+
+
 
 exports.recoverCR = async (req, res) => {
   // THIS FUCNTION WILL HELP TO CHANGE THE STATUS OF CR FROM ISACTIVE FALSE TO TRUE, 
@@ -283,11 +290,11 @@ exports.recoverCR = async (req, res) => {
   }
 }
 
+
+
 exports.createPart = (async (req, res) => {
 
   const data = { partNumber, partDescription, isGrouped, PiecePerPacket } = req.body
-
-
   // THIS FUNCTION WILL CREATE NEW PART IN THE SYSTEM
   let newPart = {
     partNumber: data.partNumber,
@@ -301,186 +308,186 @@ exports.createPart = (async (req, res) => {
   }
   else {
     Parts.create(newPart).then((data) => {
-      // console.log(newPart, ":newPart");
-
       return utils.commonResponse(res, 200, "success", {})
     })
   }
 })
 
+
+
 // NOT IN USE
-exports.uploadBomGoogleSheet = async (req, res) => {
-  // THIS FUNCITON WILL CREATE BOM REFFERCE BASED ON THE CR LIST FROM GOOGLE EXCEL
-  try {
-    const serviceAccountAuth = new JWT({
-      email: service_account.client_email,
-      key: service_account.private_key,
-      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-    });
-    const sheet = new GoogleSpreadsheet(
-      process.env.COMMERCIALREFFERENCE,
-      serviceAccountAuth
-    );
-    const sheetinfo = await sheet.loadInfo();
-    const worksheet = sheet.sheetsByIndex[0];
-    const rows = await worksheet.getRows();
-    commercialReff = [];
-    productsList = [];
-    partsList = [];
-    cr = {};
-    product = {};
-    part = {};
-    parentIdsList = [];
-    await Bluebird.each(rows, async (rowData, _rowIndex) => {
-      _rowData = rowData.toObject();
-      if (_rowData.Level == "0") {
-        cr = {};
-        cr.referenceNumber = _rowData.Number;
-        cr.description = _rowData.EnglishDescription;
-        cr.parts = [];
-      }
-      if (_rowData.Level == "1") {
-        product = {};
-        product.productNumber = _rowData.Number;
-        product.productDescription = _rowData.EnglishDescription;
-        product.crNumber = cr.referenceNumber;
-        product.quantity = _rowData.Quantity;
-        cr.productNumber = _rowData.Number;
-        productsList.push(product);
-      }
-      if (_rowData.Level == "2") {
-        part = {};
-        part.partNumber = _rowData.Number;
-        part.partDescription = _rowData.EnglishDescription;
-        part.quantity = _rowData.Quantity;
-        part.videoUrl = _rowData.videoUrl;
-        part.isCritical = _rowData.Criticality == "MINOR" ? false : true;
-        part.productNumber = _rowData.ParentNumber;
-        part.crNumber = cr.referenceNumber;
-        cr.parts.push(part);
-        partsList.push(part);
-      }
+// exports.uploadBomGoogleSheet = async (req, res) => {
+//   // THIS FUNCITON WILL CREATE BOM REFFERCE BASED ON THE CR LIST FROM GOOGLE EXCEL
+//   try {
+//     const serviceAccountAuth = new JWT({
+//       email: service_account.client_email,
+//       key: service_account.private_key,
+//       scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+//     });
+//     const sheet = new GoogleSpreadsheet(
+//       process.env.COMMERCIALREFFERENCE,
+//       serviceAccountAuth
+//     );
+//     const sheetinfo = await sheet.loadInfo();
+//     const worksheet = sheet.sheetsByIndex[0];
+//     const rows = await worksheet.getRows();
+//     commercialReff = [];
+//     productsList = [];
+//     partsList = [];
+//     cr = {};
+//     product = {};
+//     part = {};
+//     parentIdsList = [];
+//     await Bluebird.each(rows, async (rowData, _rowIndex) => {
+//       _rowData = rowData.toObject();
+//       if (_rowData.Level == "0") {
+//         cr = {};
+//         cr.referenceNumber = _rowData.Number;
+//         cr.description = _rowData.EnglishDescription;
+//         cr.parts = [];
+//       }
+//       if (_rowData.Level == "1") {
+//         product = {};
+//         product.productNumber = _rowData.Number;
+//         product.productDescription = _rowData.EnglishDescription;
+//         product.crNumber = cr.referenceNumber;
+//         product.quantity = _rowData.Quantity;
+//         cr.productNumber = _rowData.Number;
+//         productsList.push(product);
+//       }
+//       if (_rowData.Level == "2") {
+//         part = {};
+//         part.partNumber = _rowData.Number;
+//         part.partDescription = _rowData.EnglishDescription;
+//         part.quantity = _rowData.Quantity;
+//         part.videoUrl = _rowData.videoUrl;
+//         part.isCritical = _rowData.Criticality == "MINOR" ? false : true;
+//         part.productNumber = _rowData.ParentNumber;
+//         part.crNumber = cr.referenceNumber;
+//         cr.parts.push(part);
+//         partsList.push(part);
+//       }
 
-      if (
-        !commercialReff.some((e) => e.referenceNumber == cr.referenceNumber)
-      ) {
-        commercialReff.push(cr);
-      }
-    });
+//       if (
+//         !commercialReff.some((e) => e.referenceNumber == cr.referenceNumber)
+//       ) {
+//         commercialReff.push(cr);
+//       }
+//     });
 
-    comReffNos = await CommercialReference.aggregate([
-      {
-        $project: {
-          referenceNumber: 1,
-        },
-      },
-    ]);
+//     comReffNos = await CommercialReference.aggregate([
+//       {
+//         $project: {
+//           referenceNumber: 1,
+//         },
+//       },
+//     ]);
 
-    existingCRNos = collect(comReffNos).pluck("referenceNumber");
+//     existingCRNos = collect(comReffNos).pluck("referenceNumber");
 
-    newCRNos = commercialReff
-      .map((_data) => {
-        if (!existingCRNos.items.includes(_data.referenceNumber)) {
-          return _data;
-        }
-      })
-      .filter((notUndefined) => notUndefined !== undefined);
-    var newCommReff = [];
-    if (newCRNos.length > 0) {
-      newCommReff = JSON.parse(
-        JSON.stringify(await CommercialReference.create(newCRNos))
-      );
-      const newProductList = productsList.map((product) => {
-        const matchingItem = newCommReff.find(
-          (item) => item.referenceNumber === product.crNumber
-        );
-        return {
-          ...product,
-          crId: matchingItem
-            ? new mongoose.Types.ObjectId(matchingItem._id)
-            : null,
-        };
-      });
+//     newCRNos = commercialReff
+//       .map((_data) => {
+//         if (!existingCRNos.items.includes(_data.referenceNumber)) {
+//           return _data;
+//         }
+//       })
+//       .filter((notUndefined) => notUndefined !== undefined);
+//     var newCommReff = [];
+//     if (newCRNos.length > 0) {
+//       newCommReff = JSON.parse(
+//         JSON.stringify(await CommercialReference.create(newCRNos))
+//       );
+//       const newProductList = productsList.map((product) => {
+//         const matchingItem = newCommReff.find(
+//           (item) => item.referenceNumber === product.crNumber
+//         );
+//         return {
+//           ...product,
+//           crId: matchingItem
+//             ? new mongoose.Types.ObjectId(matchingItem._id)
+//             : null,
+//         };
+//       });
 
-      productsList = newProductList;
-    }
-    getProductNumber = await Products.aggregate([
-      {
-        $project: {
-          productNumber: 1,
-        },
-      },
-    ]);
-    existingProductNos = collect(getProductNumber).pluck("productNumber");
-    newProductsNos = productsList
-      .map((_data) => {
-        if (!existingProductNos.items.includes(_data.productNumber)) {
-          return _data;
-        }
-      })
-      .filter((notUndefined) => notUndefined !== undefined);
-    var newProductListFromResponse;
-    if (newProductsNos.length > 0) {
-      newProductListFromResponse = JSON.parse(
-        JSON.stringify(await Products.create(newProductsNos))
-      );
-    }
+//       productsList = newProductList;
+//     }
+//     getProductNumber = await Products.aggregate([
+//       {
+//         $project: {
+//           productNumber: 1,
+//         },
+//       },
+//     ]);
+//     existingProductNos = collect(getProductNumber).pluck("productNumber");
+//     newProductsNos = productsList
+//       .map((_data) => {
+//         if (!existingProductNos.items.includes(_data.productNumber)) {
+//           return _data;
+//         }
+//       })
+//       .filter((notUndefined) => notUndefined !== undefined);
+//     var newProductListFromResponse;
+//     if (newProductsNos.length > 0) {
+//       newProductListFromResponse = JSON.parse(
+//         JSON.stringify(await Products.create(newProductsNos))
+//       );
+//     }
 
-    const uniqueParts = await getUniqueParts(partsList);
+//     const uniqueParts = await getUniqueParts(partsList);
 
-    const partsListnew = Array.from(uniqueParts.values());
+//     const partsListnew = Array.from(uniqueParts.values());
 
-    partsNumbersRes = await Parts.aggregate([
-      {
-        $project: {
-          partNumber: 1,
-        },
-      },
-    ]);
+//     partsNumbersRes = await Parts.aggregate([
+//       {
+//         $project: {
+//           partNumber: 1,
+//         },
+//       },
+//     ]);
 
-    existingPartNos = collect(partsNumbersRes).pluck("partNumber");
-    alreadyCreatedParts = [];
-    newPartsNos = partsListnew
-      .map((_data) => {
-        if (!existingPartNos.items.includes(_data.partNumber)) {
-          return _data;
-        } else {
-          alreadyCreatedParts.push(_data);
-        }
-      })
-      .filter((notUndefined) => notUndefined !== undefined);
+//     existingPartNos = collect(partsNumbersRes).pluck("partNumber");
+//     alreadyCreatedParts = [];
+//     newPartsNos = partsListnew
+//       .map((_data) => {
+//         if (!existingPartNos.items.includes(_data.partNumber)) {
+//           return _data;
+//         } else {
+//           alreadyCreatedParts.push(_data);
+//         }
+//       })
+//       .filter((notUndefined) => notUndefined !== undefined);
 
-    if (newPartsNos.length > 0) {
-      // await Parts.create(partsListnew);
-      _newParts = JSON.parse(JSON.stringify(await Parts.create(newPartsNos)));
+//     if (newPartsNos.length > 0) {
+//       // await Parts.create(partsListnew);
+//       _newParts = JSON.parse(JSON.stringify(await Parts.create(newPartsNos)));
 
-      newPartsSerialNOs = _newParts.map((newComponent) => {
-        return {
-          hubSerialNo: [],
-          partId: newComponent._id,
-          partNumber: newComponent.partNumber,
-        };
-      });
-      await PartsSerialNo.create(newPartsSerialNOs);
-    }
+//       newPartsSerialNOs = _newParts.map((newComponent) => {
+//         return {
+//           hubSerialNo: [],
+//           partId: newComponent._id,
+//           partNumber: newComponent.partNumber,
+//         };
+//       });
+//       await PartsSerialNo.create(newPartsSerialNOs);
+//     }
 
-    if (alreadyCreatedParts.length > 0) {
-      uniqueAlreadyParts = await getUniqueParts(alreadyCreatedParts);
-      uniqueAlreadyParts = Array.from(uniqueAlreadyParts.values());
-      await Promise.all(
-        uniqueAlreadyParts.map((parts) =>
-          updatePartsIDs(parts.parentIds ?? [], parts.partNumber)
-        )
-      );
-    }
+//     if (alreadyCreatedParts.length > 0) {
+//       uniqueAlreadyParts = await getUniqueParts(alreadyCreatedParts);
+//       uniqueAlreadyParts = Array.from(uniqueAlreadyParts.values());
+//       await Promise.all(
+//         uniqueAlreadyParts.map((parts) =>
+//           updatePartsIDs(parts.parentIds ?? [], parts.partNumber)
+//         )
+//       );
+//     }
 
-    utils.commonResponse(res, 200, "success", {});
+//     utils.commonResponse(res, 200, "success", {});
 
-  } catch (error) {
-    //console.log(error);
-    utils.commonResponse(res, 500, "server error", error.toString());
-  }
-};
+//   } catch (error) {
+//     //console.log(error);
+//     utils.commonResponse(res, 500, "server error", error.toString());
+//   }
+// };
 
 
 exports.uploadCRFromAdminPreview = async (req, res) => {
@@ -726,7 +733,7 @@ exports.uploadCRExcelFromHub = async (req, res) => {
         compPartNo: row.Reference,
         description: row.Description,
         fixedQuantity: row.FixedQuantity,
-        Quantity: row.Quantity,
+        Quantity: parseFloat(row.Quantity).toFixed(2),
         isCritical: row["Core / Non core"] ? row["Core / Non core"].toLowerCase() !== "non-core" : false
       }));
 
@@ -791,7 +798,7 @@ exports.uploadCRExcelFromHub = async (req, res) => {
     }));
 
     const EntirePartList = CRsWithParts.flatMap(cr => cr.parts.map((part, key)=>{
-      part.quantity = part.quantity * cr.quantity
+      part.quantity = Math.round(part.quantity * 100) / 100 * cr.quantity
       return (
         part
       )

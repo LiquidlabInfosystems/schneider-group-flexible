@@ -12,6 +12,8 @@ const multer = require('multer');
 const verifyToken = require("../Middleware");
 const fs = require('fs')
 
+
+
 let storage = multer.diskStorage({
     destination: (req, file, cb) => {
       cb(null, 'uploads/');
@@ -20,7 +22,6 @@ let storage = multer.diskStorage({
       cb(null, Date.now() + file.originalname);
     }
   });
-  
   if (fs.existsSync('uploads')) {
     const files = fs.readdirSync("uploads");
     files.forEach((file) => {
@@ -31,8 +32,12 @@ let storage = multer.diskStorage({
   if (!fs.existsSync('uploads')) {
     fs.mkdirSync("uploads")
   }
+
+
 // Create a multer instance with storage configuration
 const upload = multer({ storage: storage });
+
+
 
 // AUTHENTICATION 
 router.post("/hublogin", hubs.LoginToHubs);
@@ -47,12 +52,18 @@ router.post(
   serialNoController.generateComponentSerialNo
 );
 
+
+
 // REPORT RELATED REQUESTS
 router.post("/generateProjectStatusReport", verifyToken,ReportController.generateProjectStatusReport)
+
+
 
 // ORDER RELATED REQUESTS
 router.post("/uploadCRExcelFromHub",verifyToken, upload.single("file"), sheetController.uploadCRExcelFromHub);
 router.post("/createNewOrderFromHub",verifyToken, ProjectController.createNewOrderFromHub);
+
+
 
 // SERIAL NUMBER REQUESTS
 router.post("/generatePartSerialNo",verifyToken, serialNoController.generatePartSerialNo);
@@ -61,8 +72,9 @@ router.post("/generatePacketSerialNo",verifyToken, serialNoController.generatePa
 router.post("/updatePacketQty",verifyToken, serialNoController.updatePacketQty);
 router.post("/removePacketSerialNo",verifyToken, serialNoController.removePacketSerialNo);
 router.post("/getAllPacketsInProject",verifyToken, serialNoController.getAllPacketsInProject);
-router.post("/generatePanelSerialNo",verifyToken, serialNoController.generatePanelSerialNo);
 router.post("/generateBoxSerialNo",verifyToken, BoxSerialNoController.generateBoxSerialNo);
+
+
 
 // BOX RELATED REQUESTS
 router.post("/addBoxToProject",verifyToken, BoxSerialNoController.addBoxToProject);
@@ -77,6 +89,8 @@ router.post("/addPartsToBoxes",verifyToken, BoxSerialNoController.addPartsToBox)
 router.post("/removePartsFromBoxes",verifyToken, BoxSerialNoController.removePartsFromBoxes);
 
 
+
+
 // PROJECT RELATED REQEUSTS
 router.post("/getAllProjectsInHub",verifyToken, ProjectController.getAllProjectsInHub);
 router.post("/getOpenProjects",verifyToken, ProjectController.getOpenProjects);
@@ -87,10 +101,14 @@ router.post("/getPendingPartsDetails",verifyToken, ProjectController.getPendingP
 router.post("/getAllPartsInProject",verifyToken, ProjectController.getAllPartsInProject);
 router.post("/updateProjectPartList",verifyToken, ProjectController.updateProjectPartList);
 
+
+
 // PARTS RELATED REQUESTS
 router.post("/componentScanResult",verifyToken, ProjectController.getComponentScanResult);
 router.post("/incrementFixedQuantity",verifyToken, ProjectController.getincrementFixedQuantity);
 router.post("/partScanResult",verifyToken, PartsController.partScanResult);
+
+
 
 // SPOKE RELATED REQUESTS
 router.post("/getSpokeDetails", verifyToken, SpokeController.getSpokeDetails);
