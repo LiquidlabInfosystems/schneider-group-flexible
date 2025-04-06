@@ -372,8 +372,8 @@ exports.savePartPackingMethod = async (req, res) => {
   // THIS FUNCTION WILL GENERATE SERIAL NUMBER FOR PARTS
   try {
     const { hubID, partID, partNumber, projectId, PiecePerPacket, grouped } = req.body;
-    console.log(hubID,partNumber, projectId, PiecePerPacket, grouped );
-    
+    console.log(hubID, partNumber, projectId, PiecePerPacket, grouped);
+
     let scannedPart
     let serialNumbers
     let partList
@@ -454,16 +454,16 @@ exports.savePartPackingMethod = async (req, res) => {
       }
       project.partList.map((part, key) => {
         if (part.partNumber == partNumber) {
-          part.grouped = true,
-            part.PiecePerPacket = PiecePerPacket
-            PiecePerPacket.map((i, index)=>{
-              if(part.scannedStatusOfPacket.length != PiecePerPacket.length){
-                part.scannedStatusOfPacket.push(false)
-              }
-            })
+          part.grouped = true
+          part.PiecePerPacket = PiecePerPacket
+          PiecePerPacket.map((i, index) => {
+            if (part.scannedStatusOfPacket.length != PiecePerPacket.length) {
+              part.scannedStatusOfPacket.push(false)
+            }
+          })
         }
       })
-     
+
     }
     else {
       project.partList.map((part, key) => {
@@ -476,7 +476,7 @@ exports.savePartPackingMethod = async (req, res) => {
     }
     // update the partlist
     project.save()
-    
+
 
     return utils.commonResponse(res, 200, `Part Number ${partNumber} packing configuratino saved`, {
       hubID: hubID,
@@ -490,7 +490,7 @@ exports.savePartPackingMethod = async (req, res) => {
 };
 
 
-exports.updatePacketQty = async(req, res)=>{
+exports.updatePacketQty = async (req, res) => {
   const { packetserialno, qty } = req.body;
   let missingFields = []
   if (!packetserialno) missingFields.push("packetserialno");
@@ -502,7 +502,7 @@ exports.updatePacketQty = async(req, res)=>{
       `Required: ${missingFields.join(", ")}`
     );
   }
-  await Partserialinfo.updateOne({serial_no:packetserialno},{qty:qty})
+  await Partserialinfo.updateOne({ serial_no: packetserialno }, { qty: qty })
   return utils.commonResponse(
     res,
     200,
@@ -511,7 +511,7 @@ exports.updatePacketQty = async(req, res)=>{
 }
 
 
-exports.removePacketSerialNo = async(req, res)=>{
+exports.removePacketSerialNo = async (req, res) => {
   const { packetserialno } = req.body;
   let missingFields = []
   if (!packetserialno) missingFields.push("packetserialno");
@@ -522,7 +522,7 @@ exports.removePacketSerialNo = async(req, res)=>{
       `Required: ${missingFields.join(", ")}`
     );
   }
-  await Partserialinfo.deleteOne({serial_no:packetserialno})
+  await Partserialinfo.deleteOne({ serial_no: packetserialno })
   return utils.commonResponse(
     res,
     200,
@@ -533,7 +533,7 @@ exports.removePacketSerialNo = async(req, res)=>{
 
 
 
-exports.getAllPacketsInProject = async (req, res)=>{
+exports.getAllPacketsInProject = async (req, res) => {
   const { hubID, partNumber, projectId } = req.body;
   const missingFields = [];
   // if (grouped) missingFields.push("grouped");
@@ -547,11 +547,11 @@ exports.getAllPacketsInProject = async (req, res)=>{
       `Required: ${missingFields.join(", ")}`
     );
   }
-  let serials = await Partserialinfo.find({projectId, partNumber, hubID})
+  let serials = await Partserialinfo.find({ projectId, partNumber, hubID })
   return utils.commonResponse(
     res,
     200,
-    {serials},
+    { serials },
     `Fetched Successfully`
   );
 }
@@ -598,7 +598,7 @@ exports.generatePacketSerialNo = async (req, res) => {
       shortid.generate(6)
     );
 
-    await Partserialinfo.create({ serial_no: serialNumbers[0], qty , projectId, partNumber, hubID}); // Await the creation
+    await Partserialinfo.create({ serial_no: serialNumbers[0], qty, projectId, partNumber, hubID }); // Await the creation
 
     let hubIDasObject = new mongoose.Types.ObjectId(hubID)
     const searchCriteria = partID ? { partId: partID } : { partNumber: partNumber };
@@ -655,7 +655,7 @@ exports.generatePacketSerialNo = async (req, res) => {
       partNumber,
       partDescription: scannedPart.description,
       qnty: qty,
-      grouped:serialNumbers.length>0?true:false,
+      grouped: serialNumbers.length > 0 ? true : false,
       serialNos: serialNumbers,
     });
   } catch (error) {
