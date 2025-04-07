@@ -15,6 +15,7 @@ const Partserialinfo = require("../Models/Partserialinfo.js");
 
 
 
+
 // HANDLES CHECK COMPONENTS QUANTITY
 async function checkComponentQuntityExceeded(
   totalQuantity,
@@ -71,7 +72,6 @@ async function checkComponentExitInTheProject(res, componentID, projectID) {
     const findComponentExist = await Component.aggregate([
       {
         $match: {
-          // '_id': new ObjectId('6716323a8693a807bcb8106e')
           _id: new mongoose.Types.ObjectId(componentID),
         },
       },
@@ -84,7 +84,6 @@ async function checkComponentExitInTheProject(res, componentID, projectID) {
           pipeline: [
             {
               $match: {
-                // '_id': new ObjectId('6716323f8693a807bcb81d9f')
                 _id: new mongoose.Types.ObjectId(projectID),
               },
             },
@@ -282,7 +281,6 @@ exports.addComponentsToBox = async (req, res) => {
       projectID,
       componentSerialNumber,
     } = req.body;
-
     if (
       !hubID ||
       !componentID ||
@@ -292,14 +290,12 @@ exports.addComponentsToBox = async (req, res) => {
     ) {
       return utils.commonResponse(res, 400, "Invalid input parameters");
     }
-
     // const findComponentAvailableInBox =
     const findComponentExist = await checkComponentExitInTheProject(
       res,
       componentID,
       projectID
     );
-
     if (findComponentExist.length > 0) {
       if (!findComponentExist[0].isComponentExist) {
         return utils.commonResponse(
@@ -309,35 +305,28 @@ exports.addComponentsToBox = async (req, res) => {
         );
       }
     }
-
     const box = await Boxes.findOne({ serialNo: boxSerialNo });
     if (!box) {
       return utils.commonResponse(res, 404, "Box serial number not found");
     }
-
     const component = await ComponentSerialNo.findOne({
       componentID: componentID,
     });
-
     const componentName = await Component.findOne({
       _id: new mongoose.Types.ObjectId(componentID),
     });
-
     if (!component) {
       return utils.commonResponse(res, 404, "Component ID not found");
     }
-
     const hub = await Hub.findById(hubID);
     if (!hub) {
       return utils.commonResponse(res, 404, "Hub ID not found");
     }
-
     const componentSerialEntry = await ComponentSerialNo.findOne({
       componentID: componentID,
       "hubSerialNo.hubID": hubID,
       "hubSerialNo.serialNos": componentSerialNumber,
     });
-
     if (!componentSerialEntry) {
       return utils.commonResponse(
         res,
@@ -348,12 +337,10 @@ exports.addComponentsToBox = async (req, res) => {
     const allProjectBasedBoxes = await Boxes.find({
       projectId: new mongoose.Types.ObjectId(projectID),
     });
-
     for (const serialBox of allProjectBasedBoxes) {
       const existingComponent = serialBox.components.find(
         (comp) => comp.componentID && comp.componentID.equals(componentID)
       );
-
       if (existingComponent) {
         if (
           existingComponent.componentSerialNo.includes(componentSerialNumber)
@@ -364,24 +351,16 @@ exports.addComponentsToBox = async (req, res) => {
             "Serial number already exists for this component in the box"
           );
         }
-
-        // Add the serial number and update the quantity
         existingComponent.componentSerialNo.push(componentSerialNumber);
         existingComponent.quantity = existingComponent.componentSerialNo.length;
-
-        // // Save the updated box
-        // await serialBox.save();
       }
     }
-
-    // else {
     box.components.push({
       componentID,
       componentName: componentName.componentName,
       componentSerialNo: [componentSerialNumber],
       quantity: 1,
     });
-    // }
     const totalComponentsQuantity = await Boxes.aggregate([
       {
         $match: {
@@ -420,10 +399,8 @@ exports.addComponentsToBox = async (req, res) => {
         "The ordered quantity of this item has been added to the box."
       );
     }
-
     box.quantity += 1;
     await box.save();
-
     utils.commonResponse(res, 200, "Component added to box successfully", {
       boxid: box._id,
       totalComponents: box.quantity,

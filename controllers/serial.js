@@ -64,146 +64,17 @@ exports.generateComponentSerialNo = async (req, res) => {
 };
 
 
-// exports.generatePartSerialNo = async (req, res) => {
-//   // THIS FUNCTION WILL GENERATE SERIAL NUMBER FOR PARTS
-//   try {
-//     const { hubID, partID, partNumber, qnty, projectId } = req.body;
-//     if (!qnty || typeof qnty !== "number" || !hubID || !partNumber) {
-//       return utils.commonResponse(
-//         res,
-//         400,
-//         "Required Quantity (qnty) , hubID, partNumber"
-//       );
-//     }
-//     let scannedPart
-
-//     if (projectId) {
-//       console.log("searching for part in project")
-//       let project_id = new mongoose.Types.ObjectId(projectId)
-//       let project = await Projects.findOne({ _id: project_id })
-//       let partList = project.partList
-//       scannedPart = partList.find(part => part.partNumber === partNumber);
-//       if (scannedPart.length === 0) {
-//         return utils.commonResponse(res, 200, "part not in this current project")
-//       }
-//     }
-//     else {
-//       return utils.commonResponse(res, 200, "projectId missing in the request")
-//     }
-
-//     let serialNumbers
-//     let PiecePerPacket = []
-//     let grouped = false
-
-//     if (scannedPart.grouped) {
-//       const requiredQuantity = qnty;
-//       const maxPerPacket = scannedPart.PiecePerPacket;
-//       const packets = calculatePackets(requiredQuantity, maxPerPacket);
-//       PiecePerPacket = packets
-//       grouped = true
-//       serialNumbers = Array.from({ length: packets.length }, () =>
-//         shortid.generate(6)
-//       );
-//     }
-//     else {
-//       serialNumbers = Array.from({ length: qnty }, () =>
-//         shortid.generate(6)
-//       );
-//     }
-//     let hubIDasObject = new mongoose.Types.ObjectId(hubID)
-//     const searchCriteria = partID ? { partId: partID } : { partNumber: partNumber };
-//     const partSerialRecord = await partSerialNo.findOne(searchCriteria);
-//     if (partSerialRecord) {
-//       const hubEntry = partSerialRecord.hubSerialNo.find(
-//         (entry) => entry.hubId === hubIDasObject
-//       );
-//       // console.log(hubIDasObject, partID, hubEntry)
-//       // loop to serial number and create partserialinfo
-
-//       for (let i = 0; i < serialNumbers.length; i++) {
-//         const serial = serialNumbers[i];
-//         const qty = PiecePerPacket[i];
-//         // console.log(serial, qty)
-//         await Partserialinfo.create({ serial_no: serial, qty }); // Await the creation
-//       }
-
-//       if (hubEntry) {
-
-
-//         await partSerialNo.updateOne(
-//           {
-//             ...searchCriteria,
-//             "hubSerialNo.hubId": hubIDasObject,
-//           },
-//           {
-//             $inc: { "hubSerialNo.$.serialNo": qnty },
-//             $push: { "hubSerialNo.$.serialNos": { $each: serialNumbers } },
-//           }
-//         );
-//       } else {
-//         await partSerialNo.updateOne(
-//           searchCriteria,
-//           {
-//             $push: {
-//               hubSerialNo: {
-//                 hubId: hubIDasObject,
-//                 serialNo: qnty,
-//                 serialNos: serialNumbers,
-//               },
-//             },
-//           }
-//         );
-//       }
-//     } else {
-//       await partSerialNo.updateOne(
-//         searchCriteria,
-//         {
-//           $setOnInsert: searchCriteria,
-//           $push: {
-//             hubSerialNo: {
-//               hubId: hubIDasObject,
-//               serialNo: qnty,
-//               serialNos: serialNumbers,
-//             },
-//           },
-//         },
-//         { upsert: true }
-//       );
-//     }
-//     const part = partID
-//       ? await parts.findById(partID)
-//       : await parts.findOne({ partNumber: partNumber });
-//     return utils.commonResponse(res, 200, "Part serial number generated", {
-//       hubID: hubIDasObject,
-//       partID: part ? part._id : null,
-//       partNumber: part ? part.partNumber : partNumber,
-//       partDescription: part
-//         ? `${part.partNumber} - ${part.partDescription}`
-//         : "",
-//       qnty: qnty,
-//       grouped: grouped,
-//       serialNos: serialNumbers,
-//       PiecePerPacket: PiecePerPacket,
-//     });
-//   } catch (error) {
-//     console.error("Error generating part serial number:", error);
-//     return utils.commonResponse(res, 500, "Internal Server Error", error);
-//   }
-// };
-
 exports.generatePartSerialNo = async (req, res) => {
   // THIS FUNCTION WILL GENERATE SERIAL NUMBER FOR PARTS
   try {
-    const { hubID, partID, partNumber, projectId, PiecePerPacket, grouped } = req.body;
-    let scannedPart
-    let serialNumbers
-    let partList
-    let project
+    const { hubID, partID, partNumber, qnty, projectId } = req.body;
+
     const missingFields = [];
     // if (grouped) missingFields.push("grouped");
     if (!hubID) missingFields.push("hubID");
     if (!partNumber) missingFields.push("partNumber");
     if (!projectId) missingFields.push("projectId");
+    if (!qnty) missingFields.push("qnty");
     if (missingFields.length > 0) {
       return utils.commonResponse(
         res,
@@ -211,12 +82,12 @@ exports.generatePartSerialNo = async (req, res) => {
         `Required: ${missingFields.join(", ")}`
       );
     }
+
     if (projectId) {
-      try { project = await Projects.findOne({ _id: new mongoose.Types.ObjectId(projectId) }) }
-      catch {
-        return utils.commonResponse(res, 200, "Invalid project ID")
-      }
-      partList = project.partList
+      console.log("searching for part in project")
+      let project_id = new mongoose.Types.ObjectId(projectId)
+      let project = await Projects.findOne({ _id: project_id })
+      let partList = project.partList
       scannedPart = partList.find(part => part.partNumber === partNumber);
       if (scannedPart.length === 0) {
         return utils.commonResponse(res, 200, "part not in this current project")
@@ -225,84 +96,29 @@ exports.generatePartSerialNo = async (req, res) => {
     else {
       return utils.commonResponse(res, 200, "projectId missing in the request")
     }
-    const projectBoxes = await Boxes.find({ projectId: projectId });
-    const existingPartsInfo = [];
-    // Iterate through boxes directly instead of flattening first
-    for (const box of projectBoxes) {
-      const matchingComponents = box.components.filter(
-        comp => comp.componentName === partNumber
-      );
-      if (matchingComponents.length > 0) {
-        existingPartsInfo.push({
-          boxSerial: box.serialNo || 'Unknown Serial',
-          components: matchingComponents
-        });
-      }
-    }
-    if (existingPartsInfo.length > 0) {
-      const boxSerials = existingPartsInfo.map(info => info.boxSerial).join(', ');
-      return utils.commonResponse(
-        res,
-        400,
-        `Serial Number cannot be generated for part ${partNumber}. ` +
-        `Found in box(es): ${boxSerials}`
-      );
-    }
-    if (grouped) {
-      const missingFields = [];
-      if (!PiecePerPacket) missingFields.push('PiecePerPacket');
-      if (missingFields.length > 0) {
-        return utils.commonResponse(
-          res,
-          400,
-          `Required: ${missingFields.join(", ")}`
-        );
-      }
-      // partListUpdates = { "isgrouped": true, "PiecePerPacket": PiecePerPacket }
-      let sumOfPiecePerPacket = 0
-      PiecePerPacket.map((packetqty, key) => {
-        sumOfPiecePerPacket = sumOfPiecePerPacket + packetqty
-      })
-      if (sumOfPiecePerPacket != scannedPart.quantity) {
-        return utils.commonResponse(
-          res, 201,
-          `The sum of pieces in each packet (${sumOfPiecePerPacket}) is not matching with the required quanity (${scannedPart.quantity})`
-        );
-      }
-      project.partList.map((part, key) => {
-        if (part.partNumber == partNumber) {
-          part.grouped = true,
-            part.PiecePerPacket = PiecePerPacket
-        }
-      })
-      serialNumbers = Array.from({ length: PiecePerPacket.length }, () =>
-        shortid.generate(6)
-      );
-      for (let i = 0; i < serialNumbers.length; i++) {
-        const serial = serialNumbers[i];
-        const qty = PiecePerPacket[i];
-        await Partserialinfo.create({ serial_no: serial, qty }); // Await the creation
-      }
-    }
-    else {
-      project.partList.map((part, key) => {
-        if (part.partNumber == partNumber) {
-          part.grouped = false
-          part.PiecePerPacket = []
-        }
-      })
-      serialNumbers = Array.from({ length: scannedPart.quantity }, () =>
-        shortid.generate(6)
-      );
 
-      for (let i = 0; i < serialNumbers.length; i++) {
-        const serial = serialNumbers[i];
-        const qty = scannedPart.quantity
-        await Partserialinfo.create({ serial_no: serial, qty }); // Await the creation
-      }
+    let serialNumbers
+    let PiecePerPacket = []
+    let grouped = false
+
+    // if (scannedPart.grouped) {
+    //   const requiredQuantity = qnty;
+    //   const maxPerPacket = scannedPart.PiecePerPacket;
+    //   const packets = calculatePackets(requiredQuantity, maxPerPacket);
+    //   PiecePerPacket = packets
+    //   grouped = true
+    //   serialNumbers = Array.from({ length: packets.length }, () =>
+    //     shortid.generate(6)
+    //   );
+    // }
+    // else {
+    if (scannedPart.grouped) {
+      return utils.commonResponse(res, 201, "This is a grouped part, Use generatePacketSerialNo for that purpouse")
     }
-    // update the partlist
-    project.save()
+    serialNumbers = Array.from({ length: qnty }, () =>
+      shortid.generate(6)
+    );
+    // }
     let hubIDasObject = new mongoose.Types.ObjectId(hubID)
     const searchCriteria = partID ? { partId: partID } : { partNumber: partNumber };
     const partSerialRecord = await partSerialNo.findOne(searchCriteria);
@@ -310,7 +126,19 @@ exports.generatePartSerialNo = async (req, res) => {
       const hubEntry = partSerialRecord.hubSerialNo.find(
         (entry) => entry.hubId === hubIDasObject
       );
+      // console.log(hubIDasObject, partID, hubEntry)
+      // loop to serial number and create partserialinfo
+
+      for (let i = 0; i < serialNumbers.length; i++) {
+        const serial = serialNumbers[i];
+        const qty = PiecePerPacket[i];
+        // console.log(serial, qty)
+        await Partserialinfo.create({ serial_no: serial, qty }); // Await the creation
+      }
+
       if (hubEntry) {
+
+
         await partSerialNo.updateOne(
           {
             ...searchCriteria,
@@ -328,7 +156,7 @@ exports.generatePartSerialNo = async (req, res) => {
             $push: {
               hubSerialNo: {
                 hubId: hubIDasObject,
-                serialNo: scannedPart.quantity,
+                serialNo: qnty,
                 serialNos: serialNumbers,
               },
             },
@@ -343,7 +171,7 @@ exports.generatePartSerialNo = async (req, res) => {
           $push: {
             hubSerialNo: {
               hubId: hubIDasObject,
-              serialNo: scannedPart.quantity,
+              serialNo: qnty,
               serialNos: serialNumbers,
             },
           },
@@ -351,21 +179,203 @@ exports.generatePartSerialNo = async (req, res) => {
         { upsert: true }
       );
     }
+    const part = partID
+      ? await parts.findById(partID)
+      : await parts.findOne({ partNumber: partNumber });
     return utils.commonResponse(res, 200, "Part serial number generated", {
       hubID: hubIDasObject,
-      partID: scannedPart.partID,
-      partNumber,
-      partDescription: scannedPart.description,
-      qnty: scannedPart.quantity,
-      grouped: scannedPart.grouped,
+      partID: part ? part._id : null,
+      partNumber: part ? part.partNumber : partNumber,
+      partDescription: part
+        ? `${part.partNumber} - ${part.partDescription}`
+        : "",
+      qnty: qnty,
+      grouped: grouped,
       serialNos: serialNumbers,
-      PiecePerPacket: scannedPart.PiecePerPacket,
+      PiecePerPacket: PiecePerPacket,
     });
   } catch (error) {
     console.error("Error generating part serial number:", error);
     return utils.commonResponse(res, 500, "Internal Server Error", error);
   }
 };
+
+// exports.generatePartSerialNo = async (req, res) => {
+//   // THIS FUNCTION WILL GENERATE SERIAL NUMBER FOR PARTS
+//   try {
+//     const { hubID, partID, partNumber, projectId, qty } = req.body;
+//     let scannedPart
+//     let serialNumbers
+//     let partList
+//     let project
+//     const missingFields = [];
+//     // if (grouped) missingFields.push("grouped");
+//     if (!hubID) missingFields.push("hubID");
+//     if (!partNumber) missingFields.push("partNumber");
+//     if (!projectId) missingFields.push("projectId");
+//     if (missingFields.length > 0) {
+//       return utils.commonResponse(
+//         res,
+//         400,
+//         `Required: ${missingFields.join(", ")}`
+//       );
+//     }
+//     if (projectId) {
+//       try { project = await Projects.findOne({ _id: new mongoose.Types.ObjectId(projectId) }) }
+//       catch {
+//         return utils.commonResponse(res, 200, "Invalid project ID")
+//       }
+//       partList = project.partList
+//       scannedPart = partList.find(part => part.partNumber === partNumber);
+//       if (scannedPart.length === 0) {
+//         return utils.commonResponse(res, 200, "part not in this current project")
+//       }
+//     }
+//     else {
+//       return utils.commonResponse(res, 200, "projectId missing in the request")
+//     }
+
+//     const projectBoxes = await Boxes.find({ projectId: projectId });
+//     const existingPartsInfo = [];
+//     // Iterate through boxes directly instead of flattening first
+//     for (const box of projectBoxes) {
+//       const matchingComponents = box.components.filter(
+//         comp => comp.componentName === partNumber
+//       );
+//       if (matchingComponents.length > 0) {
+//         existingPartsInfo.push({
+//           boxSerial: box.serialNo || 'Unknown Serial',
+//           components: matchingComponents
+//         });
+//       }
+//     }
+//     // if (existingPartsInfo.length > 0) {
+//     //   const boxSerials = existingPartsInfo.map(info => info.boxSerial).join(', ');
+//     //   return utils.commonResponse(
+//     //     res,
+//     //     400,
+//     //     `Serial Number cannot be generated for part ${partNumber}. ` +
+//     //     `Found in box(es): ${boxSerials}`
+//     //   );
+//     // }
+//     if (scannedPart.grouped) {
+//       const missingFields = [];
+//       if (!scannedPart.PiecePerPacket) missingFields.push('PiecePerPacket');
+//       if (missingFields.length > 0) {
+//         return utils.commonResponse(
+//           res,
+//           400,
+//           `Required: ${missingFields.join(", ")}`
+//         );
+//       }
+//       // partListUpdates = { "isgrouped": true, "PiecePerPacket": PiecePerPacket }
+//       let sumOfPiecePerPacket = 0
+//       scannedPart.PiecePerPacket.map((packetqty, key) => {
+//         sumOfPiecePerPacket = sumOfPiecePerPacket + packetqty
+//       })
+//       if (sumOfPiecePerPacket > scannedPart.quantity) {
+//         return utils.commonResponse(
+//           res, 201,
+//           `The sum of pieces in each packet (${sumOfPiecePerPacket}) is more than required quanity (${scannedPart.quantity})`
+//         );
+//       }
+//       // project.partList.map((part, key) => {
+//       //   if (part.partNumber == partNumber) {
+//       //     part.grouped = true,
+//       //       part.PiecePerPacket = PiecePerPacket
+//       //   }
+//       // })
+//       serialNumbers = Array.from({ length: scannedPart.PiecePerPacket.length }, () =>
+//         shortid.generate(6)
+//       );
+//       for (let i = 0; i < serialNumbers.length; i++) {
+//         const serial = serialNumbers[i];
+//         const qty = scannedPart.PiecePerPacket[i];
+//         await Partserialinfo.create({ serial_no: serial, qty }); // Await the creation
+//       }
+//     }
+//     else {
+//       project.partList.map((part, key) => {
+//         if (part.partNumber == partNumber) {
+//           part.grouped = false
+//           part.PiecePerPacket = []
+//         }
+//       })
+//       serialNumbers = Array.from({ length: scannedPart.quantity }, () =>
+//         shortid.generate(6)
+//       );
+
+//       for (let i = 0; i < serialNumbers.length; i++) {
+//         const serial = serialNumbers[i];
+//         const qty = scannedPart.quantity
+//         await Partserialinfo.create({ serial_no: serial, qty }); // Await the creation
+//       }
+//     }
+//     // update the partlist
+//     project.save()
+//     let hubIDasObject = new mongoose.Types.ObjectId(hubID)
+//     const searchCriteria = partID ? { partId: partID } : { partNumber: partNumber };
+//     const partSerialRecord = await partSerialNo.findOne(searchCriteria);
+//     if (partSerialRecord) {
+//       const hubEntry = partSerialRecord.hubSerialNo.find(
+//         (entry) => entry.hubId === hubIDasObject
+//       );
+//       if (hubEntry) {
+//         await partSerialNo.updateOne(
+//           {
+//             ...searchCriteria,
+//             "hubSerialNo.hubId": hubIDasObject,
+//           },
+//           {
+//             $inc: { "hubSerialNo.$.serialNo": qnty },
+//             $push: { "hubSerialNo.$.serialNos": { $each: serialNumbers } },
+//           }
+//         );
+//       } else {
+//         await partSerialNo.updateOne(
+//           searchCriteria,
+//           {
+//             $push: {
+//               hubSerialNo: {
+//                 hubId: hubIDasObject,
+//                 serialNo: scannedPart.quantity,
+//                 serialNos: serialNumbers,
+//               },
+//             },
+//           }
+//         );
+//       }
+//     } else {
+//       await partSerialNo.updateOne(
+//         searchCriteria,
+//         {
+//           $setOnInsert: searchCriteria,
+//           $push: {
+//             hubSerialNo: {
+//               hubId: hubIDasObject,
+//               serialNo: scannedPart.quantity,
+//               serialNos: serialNumbers,
+//             },
+//           },
+//         },
+//         { upsert: true }
+//       );
+//     }
+//     return utils.commonResponse(res, 200, "Part serial number generated", {
+//       hubID: hubIDasObject,
+//       partID: scannedPart.partID,
+//       partNumber,
+//       partDescription: scannedPart.description,
+//       qnty: scannedPart.quantity,
+//       grouped: scannedPart.grouped,
+//       serialNos: serialNumbers,
+//       PiecePerPacket: scannedPart.PiecePerPacket,
+//     });
+//   } catch (error) {
+//     console.error("Error generating part serial number:", error);
+//     return utils.commonResponse(res, 500, "Internal Server Error", error);
+//   }
+// };
 
 
 exports.savePartPackingMethod = async (req, res) => {
@@ -446,16 +456,25 @@ exports.savePartPackingMethod = async (req, res) => {
       PiecePerPacket.map((packetqty, key) => {
         sumOfPiecePerPacket = sumOfPiecePerPacket + packetqty
       })
-      if (sumOfPiecePerPacket != scannedPart.quantity) {
+      if (sumOfPiecePerPacket > scannedPart.quantity) {
         return utils.commonResponse(
           res, 201,
-          `The sum of pieces in each packet (${sumOfPiecePerPacket}) is not matching with the required quanity (${scannedPart.quantity})`
+          `The sum of pieces in each packet (${sumOfPiecePerPacket}) is more than required quanity (${scannedPart.quantity})`
         );
       }
+
+
+      console.log(PiecePerPacket.length, scannedPart.PiecePerPacket.length);
+
+      serialNumbers = Array.from({ length: PiecePerPacket.length - scannedPart.PiecePerPacket.length - 1 }, () =>
+        shortid.generate(6)
+      );
+
       project.partList.map((part, key) => {
         if (part.partNumber == partNumber) {
           part.grouped = true
           part.PiecePerPacket = PiecePerPacket
+          part.scannedStatusOfPacket = []
           PiecePerPacket.map((i, index) => {
             if (part.scannedStatusOfPacket.length != PiecePerPacket.length) {
               part.scannedStatusOfPacket.push(false)
@@ -463,6 +482,64 @@ exports.savePartPackingMethod = async (req, res) => {
           })
         }
       })
+
+      for (let i = 0; i < serialNumbers.length; i++) {
+        const serial = serialNumbers[i];
+        const qty = scannedPart.PiecePerPacket[i];
+        await Partserialinfo.create({ serial_no: serial, qty, projectId, partNumber, hubID });
+      }
+
+
+
+      let hubIDasObject = new mongoose.Types.ObjectId(hubID)
+      const searchCriteria = partID ? { partId: partID } : { partNumber: partNumber };
+      const partSerialRecord = await partSerialNo.findOne(searchCriteria);
+
+      if (partSerialRecord) {
+        const hubEntry = partSerialRecord.hubSerialNo.find(
+          (entry) => entry.hubId === hubIDasObject
+        );
+        if (hubEntry) {
+          await partSerialNo.updateOne(
+            {
+              ...searchCriteria,
+              "hubSerialNo.hubId": hubIDasObject,
+            },
+            {
+              $inc: { "hubSerialNo.$.serialNo": qnty },
+              $push: { "hubSerialNo.$.serialNos": { $each: serialNumbers } },
+            }
+          );
+        } else {
+          await partSerialNo.updateOne(
+            searchCriteria,
+            {
+              $push: {
+                hubSerialNo: {
+                  hubId: hubIDasObject,
+                  serialNo: scannedPart.quantity,
+                  serialNos: serialNumbers,
+                },
+              },
+            }
+          );
+        }
+      } else {
+        await partSerialNo.updateOne(
+          searchCriteria,
+          {
+            $setOnInsert: searchCriteria,
+            $push: {
+              hubSerialNo: {
+                hubId: hubIDasObject,
+                serialNo: scannedPart.quantity,
+                serialNos: serialNumbers,
+              },
+            },
+          },
+          { upsert: true }
+        );
+      }
 
     }
     else {
@@ -532,30 +609,63 @@ exports.removePacketSerialNo = async (req, res) => {
 
 
 
-
 exports.getAllPacketsInProject = async (req, res) => {
-  const { hubID, partNumber, projectId } = req.body;
-  const missingFields = [];
-  // if (grouped) missingFields.push("grouped");
-  if (!hubID) missingFields.push("hubID");
-  if (!partNumber) missingFields.push("partNumber");
-  if (!projectId) missingFields.push("projectId");
-  if (missingFields.length > 0) {
+  try {
+    const { hubID, partNumber, projectId } = req.body;
+
+    // Validate required fields
+    const missingFields = [];
+    if (!hubID) missingFields.push("hubID");
+    if (!partNumber) missingFields.push("partNumber");
+    if (!projectId) missingFields.push("projectId");
+
+    if (missingFields.length > 0) {
+      return utils.commonResponse(
+        res,
+        400,
+        `Required fields missing: ${missingFields.join(", ")}`
+      );
+    }
+
+    // Find project (assuming Projects is a Mongoose model)
+    const project = await Projects.findById(projectId);
+
+    if (!project) {
+      return utils.commonResponse(
+        res,
+        404,
+        "Project not found"
+      );
+    }
+
+    // Find matching part
+    const matchingPart = project.partList?.find(
+      part => part.partNumber === partNumber
+    );
+
+    if (!matchingPart) {
+      return utils.commonResponse(
+        res,
+        404,
+        "Part not found in project"
+      );
+    }
+
     return utils.commonResponse(
       res,
-      400,
-      `Required: ${missingFields.join(", ")}`
+      200,
+      "Packets fetched successfully",
+      { packets: matchingPart.PiecePerPacket }
+    );
+  } catch (error) {
+    console.error("Error in getAllPacketsInProject:", error);
+    return utils.commonResponse(
+      res,
+      500,
+      "Internal server error"
     );
   }
-  let serials = await Partserialinfo.find({ projectId, partNumber, hubID })
-  return utils.commonResponse(
-    res,
-    200,
-    { serials },
-    `Fetched Successfully`
-  );
-}
-
+};
 
 
 exports.generatePacketSerialNo = async (req, res) => {
