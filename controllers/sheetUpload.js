@@ -673,57 +673,78 @@ exports.uploadCRFromAdmin = async (req, res) => {
 };
 
 exports.uploadCRExcelFromHub = async (req, res) => {
-  // THIS FUNCTION WILL GENERATE A ORDER PREVIEW FOR THE UPDLOADED ORDER EXCEL SHEET FROM HUB
   try {
     if (!req.file) {
       return res.status(400).send("No file uploaded.");
     }
 
-    console.log("Got the Order File. ")
+    console.log("Got the Order File. ");
     // Reading and processing the Excel file
     const filePath = req.file.path;
     const workbook = XLSX.readFile(filePath);
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(worksheet); // Read as array
+    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }); // Read as array of arrays, treat empty cells as empty strings
 
-    let fields = rows[0]
-    let missingKeys = []
+    // Check the first 3 rows (or fewer if the sheet has less than 3 rows) for headers
+    let headerRowIndex = -1;
+    let headerRow = null;
+    const requiredHeaders = ['SwitchBoard', 'Enclosure', 'Reference', 'Description', 'Quantity'];
+    const rowsToCheck = Math.min(3, rows.length);
 
-    if (!('SwitchBoard' in fields)) {
-      missingKeys.push('SwitchBoard');
-    }
-    if (!('Enclosure' in fields)) {
-      missingKeys.push('Enclosure');
-    }
-    if (!('Reference' in fields)) {
-      missingKeys.push('Reference');
-    }
-    if (!('Description' in fields)) {
-      missingKeys.push('Description');
-    }
-    if (!('Quantity' in fields)) {
-      missingKeys.push('Quantity');
+    for (let i = 0; i < rowsToCheck; i++) {
+      const row = rows[i];
+      console.log(`Checking row ${i}:`, row); // Log raw row contents
+
+      // Skip empty rows
+      if (!row || row.every(cell => cell.toString().trim() === '')) {
+        console.log(`Row ${i} is empty, skipping.`);
+        continue;
+      }
+
+      // Use raw row as headers, normalize to handle whitespace
+      const headers = row.map(cell => cell.toString().trim());
+      console.log(`Row ${i} headers:`, headers); // Log detected headers
+
+      const hasAllHeaders = requiredHeaders.every(header => headers.includes(header));
+      console.log(`Row ${i} has all required headers: ${hasAllHeaders}`);
+
+      if (hasAllHeaders) {
+        headerRowIndex = i;
+        headerRow = headers;
+        console.log(`Selected row ${i} as header row:`, headerRow);
+        break;
+      }
     }
 
-    // console.log(missingKeys)
-    if (missingKeys.length > 0) {
-      let missingInstring = "Missing Fields in the first row of the uploaded order. Remember we are looking for the first sheet of the uploaded .xlsx or .xls file. "
-      missingKeys.map((key) => {
-        return (
-          missingInstring = missingInstring + ", " + key
-        )
-      })
-      return utils.commonResponse(res, 400, "Missing Keys", missingInstring.toString());
+    // If no valid header row was found, return an error
+    if (headerRowIndex === -1) {
+      const missingInString = "Missing required headers (SwitchBoard, Enclosure, Reference, Description, Quantity) in the first three rows of the uploaded order. Ensure they are in the first sheet of the .xlsx or .xls file.";
+      return utils.commonResponse(res, 400, "Missing Headers", missingInString);
     }
 
-    const switchBoards = []
-    const CrsListFromExcel = rows
+    // Process data rows starting from the row after the header
+    const dataRows = rows.slice(headerRowIndex + 1).map(row => {
+      const rowObj = {};
+      headerRow.forEach((header, index) => {
+        rowObj[header] = row[index] !== undefined ? row[index] : '';
+      });
+      return rowObj;
+    });
+
+    // Filter out total rows (e.g., "Common Total", "Enclosure Total") and rows with undefined/empty Reference
+    const switchBoards = [];
+    const CrsListFromExcel = dataRows
       .filter(row => {
-        if (row.Enclosure && row.Enclosure.toString().toLowerCase().trim() === "common total") {
-          switchBoards.push(row.SwitchBoard);
+        // Skip rows where Enclosure ends with "Total"
+        if (row.Enclosure && row.Enclosure.toString().toLowerCase().trim().endsWith('total')) {
+          if (row.SwitchBoard) {
+            switchBoards.push(row.SwitchBoard);
+          }
+          return false;
         }
-        return (row.Reference !== undefined)
-      }) // Removes undefined entries
+        // Include rows with a defined and non-empty Reference
+        return row.Reference !== undefined && row.Reference.toString().trim() !== '';
+      })
       .map(row => ({
         SwitchBoard: row.SwitchBoard,
         Reference: row.Reference,
@@ -733,59 +754,52 @@ exports.uploadCRExcelFromHub = async (req, res) => {
         compPartNo: row.Reference,
         description: row.Description,
         fixedQuantity: row.FixedQuantity,
-        Quantity: parseFloat(row.Quantity).toFixed(2),
+        Quantity: parseFloat(row.Quantity || 0).toFixed(2),
         isCritical: row["Core / Non core"] ? row["Core / Non core"].toLowerCase() !== "non-core" : false
       }));
 
-
-
-    // console.log(switchBoards)
     // Group CRs by switchboard
-    const SwitchboardListWithCrs = switchBoards?.map(switchBoard => ({
+    const SwitchboardListWithCrs = switchBoards.map(switchBoard => ({
       switchBoard,
       components: CrsListFromExcel.filter(cr => cr.SwitchBoard === switchBoard && cr.Reference)
     }));
 
-    // console.log(SwitchboardListWithCrs)
-
     // Fetch all commercial references from the database
-    const EntireCommerialRef = await CommercialReference.find().lean()
-    // console.log(CrsListFromExcel);
+    const EntireCommerialRef = await CommercialReference.find().lean();
 
-    const CRNamesWithQuantityInOrder = CrsListFromExcel?.map(cr => ({ "Reference": cr.Reference, "Quantity": cr.Quantity }));
-    // console.log(CRNamesWithQuantityInOrder);
+    const CRNamesWithQuantityInOrder = CrsListFromExcel.map(cr => ({
+      Reference: cr.Reference,
+      Quantity: cr.Quantity
+    }));
 
-    const existingCRs = EntireCommerialRef?.map(cr => cr.referenceNumber.toLowerCase());
+    const existingCRs = EntireCommerialRef.map(cr => cr.referenceNumber.toLowerCase());
     let missingCRs = [];
-    CRNamesWithQuantityInOrder?.filter(cr => {
+    CRNamesWithQuantityInOrder.filter(cr => {
       if (!existingCRs.includes(cr.Reference.toLowerCase().trim()) && !missingCRs.includes(cr.Reference.toLowerCase().trim())) {
         missingCRs.push(cr.Reference);
-        // console.log(cr);
         return true;
       }
       return false;
     });
 
-    // console.log(CRsinCurrentOrder.length)
-
     if (missingCRs.length > 0) {
       return utils.commonResponse(res, 400, "Missing Commercial References", {
         error: "Some Commercial References do not exist in the database",
         missingCRs: missingCRs,
-        totalCRsInFile: CRNamesWithQuantityInOrder?CRNamesWithQuantityInOrder.length:0,
-        missingCount: missingCRs?.length
+        totalCRsInFile: CRNamesWithQuantityInOrder.length,
+        missingCount: missingCRs.length
       });
     }
 
     // Map order CRs to their parts
     const CRsWithParts = CRNamesWithQuantityInOrder.flatMap(currentRef =>
-      EntireCommerialRef.filter(entireCR => entireCR.referenceNumber.toLowerCase() === currentRef.Reference.toLowerCase()).map((crwithpart, index) => {
-        crwithpart.quantity = currentRef.Quantity;
-        return crwithpart
-      })
+      EntireCommerialRef
+        .filter(entireCR => entireCR.referenceNumber.toLowerCase() === currentRef.Reference.toLowerCase())
+        .map((crwithpart) => {
+          crwithpart.quantity = currentRef.Quantity;
+          return crwithpart;
+        })
     );
-
-    // console.log("cr with parts, - ", CRsWithParts)
 
     // Map switchboards to CRs with parts
     const SwitchBoardWithCRWithParts = SwitchboardListWithCrs.map(switchboard => ({
@@ -797,34 +811,37 @@ exports.uploadCRExcelFromHub = async (req, res) => {
       }))
     }));
 
-    const EntirePartList = CRsWithParts.flatMap(cr => cr.parts.map((part, key)=>{
-      part.quantity = Math.round(part.quantity * 100) / 100 * cr.quantity
-      return (
-        part
-      )
-    }) || []);
+    const EntirePartList = CRsWithParts.flatMap(cr => 
+      cr.parts.map((part) => {
+        part.quantity = Math.round(part.quantity * 100) / 100 * cr.quantity;
+        return part;
+      }) || []
+    );
 
     const FinalPartList = EntirePartList.reduce((acc, part) => {
-
-
       const existingPart = acc.find(item => item.partNumber === part.partNumber);
 
       if (existingPart) {
-
         existingPart.quantity += part.quantity;
-        // console.log('part details- ---------',part)
       } else {
-        // console.log('part details- ---------',part)
-        acc.push({ partNumber: part.partNumber, quantity: part.quantity, description: part.partDescription, grouped: part.grouped ? true : false, PiecePerPacket: part.PiecePerPacket ? part.PiecePerPacket : [],scannedStatusOfPacket:part.scannedStatusOfPacket? part.scannedStatusOfPacket:[], partID: part._id });
+        acc.push({
+          partNumber: part.partNumber,
+          quantity: part.quantity,
+          description: part.partDescription,
+          grouped: part.grouped ? true : false,
+          PiecePerPacket: part.PiecePerPacket ? part.PiecePerPacket : [],
+          scannedStatusOfPacket: part.scannedStatusOfPacket ? part.scannedStatusOfPacket : [],
+          partID: part._id
+        });
       }
-      // console.log('part details- ---------',acc)
       return acc;
-
     }, []);
+
     // Project details (static for now, can be dynamic)
     const ProjectDetails = {
       project_name: "Order",
     };
+
     // Sending the response
     utils.commonResponse(res, 200, "success", {
       Switchboards: SwitchBoardWithCRWithParts,
