@@ -602,13 +602,15 @@ exports.addPartsToBox = async (req, res) => {
     let projectWithID = new mongoose.Types.ObjectId(projectID)
     let project = await Project.findOne({ _id: projectWithID }).lean()
     let partList = project?.partList
+    const _partNumner = await Parts.findById(partID).lean()
 
     let currentpartinpartlist = {}
     let pid = ""
     partList.map((part, key) => {
       pid = partID
       pidpart = part.partID;
-      if (pid == pidpart) {
+      if (pid == pidpart || _partNumner.partNumber == part.partNumber) {
+        console.log("part", part)
         currentpartinpartlist = part
       }
     })
@@ -625,6 +627,7 @@ exports.addPartsToBox = async (req, res) => {
     // if (!part) return utils.commonResponse(res, 404, "Part ID not found");
     if (!box) return utils.commonResponse(res, 404, "Box serial number not found");
     if (!hub) return utils.commonResponse(res, 404, "Hub ID not found");
+
 
     const isSerialValid = await PartsSerialNo.exists({
       partNumber: currentpartNumber,
