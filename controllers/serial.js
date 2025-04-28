@@ -767,6 +767,7 @@ exports.generatePacketSerialNo = async (req, res) => {
       qnty: qty,
       grouped: serialNumbers.length > 0 ? true : false,
       serialNos: serialNumbers,
+      PiecePerPacket: scannedPart.PiecePerPacket,
     });
   } catch (error) {
     console.error("Error generating part serial number:", error);
