@@ -625,19 +625,19 @@ exports.addPartsToBox = async (req, res) => {
     // if (!part) return utils.commonResponse(res, 404, "Part ID not found");
     if (!box) return utils.commonResponse(res, 404, "Box serial number not found");
     if (!hub) return utils.commonResponse(res, 404, "Hub ID not found");
-    // const isSerialValid = await PartsSerialNo.exists({
-    //   partNumber: currentpartNumber,
-    //   hubSerialNo: {
-    //     $elemMatch: { hubId: hubIDasObject, serialNos: partSerialNumber },
-    //   },
-    // });
-    // if (!isSerialValid) {
-    //   return utils.commonResponse(
-    //     res,
-    //     404,
-    //     "Part Serial Number not found for the provided Part ID and Hub ID"
-    //   );
-    // }
+    const isSerialValid = await PartsSerialNo.exists({
+      partNumber: currentpartNumber,
+      hubSerialNo: {
+        $elemMatch: { hubId: hubIDasObject, serialNos: partSerialNumber },
+      },
+    });
+    if (!isSerialValid) {
+      return utils.commonResponse(
+        res,
+        404,
+        "Part Serial Number not found for the provided Part ID and Hub ID"
+      );
+    }
     const projectBoxes = await Boxes.find({ projectId: projectID });
     // Check if the part exists in any project box
     const existingPart = projectBoxes.flatMap(box => box.components).find(
