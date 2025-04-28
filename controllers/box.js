@@ -600,8 +600,9 @@ exports.addPartsToBox = async (req, res) => {
   try {
     const { hubID, partID, boxSerialNo, projectID, partSerialNumber } = req.body;
     let projectWithID = new mongoose.Types.ObjectId(projectID)
-    let project = await Project.findOne({ _id: projectWithID })
+    let project = await Project.findOne({ _id: projectWithID }).lean()
     let partList = project?.partList
+
     let currentpartinpartlist = {}
     let pid = ""
     partList.map((part, key) => {
@@ -611,26 +612,27 @@ exports.addPartsToBox = async (req, res) => {
         currentpartinpartlist = part
       }
     })
+
     let currentpartNumber = currentpartinpartlist.partNumber
     let grouped = currentpartinpartlist.grouped
     let hubIDasObject = new mongoose.Types.ObjectId(hubID)
     if (!hubID || !partID || !boxSerialNo || !projectID || !partSerialNumber) {
       return utils.commonResponse(res, 400, "Invalid input parameters");
-    }
-    const [box, hub] = await Promise.all([
-      // Parts.findById(partID),
-      Boxes.findOne({ serialNo: boxSerialNo, projectId: projectID }),
-      Hub.findById(hubID),
-    ]);
+    } 
+
+    const box = await Boxes.findOne({ serialNo: boxSerialNo, projectId: projectID })
+    const hub = await Hub.findById(hubID).lean()
     // if (!part) return utils.commonResponse(res, 404, "Part ID not found");
     if (!box) return utils.commonResponse(res, 404, "Box serial number not found");
     if (!hub) return utils.commonResponse(res, 404, "Hub ID not found");
+
     const isSerialValid = await PartsSerialNo.exists({
       partNumber: currentpartNumber,
       hubSerialNo: {
         $elemMatch: { hubId: hubIDasObject, serialNos: partSerialNumber },
       },
     });
+
     if (!isSerialValid) {
       return utils.commonResponse(
         res,
@@ -638,7 +640,7 @@ exports.addPartsToBox = async (req, res) => {
         "Part Serial Number not found for the provided Part ID and Hub ID"
       );
     }
-    const projectBoxes = await Boxes.find({ projectId: projectID });
+    const projectBoxes = await Boxes.find({ projectId: projectID }).lean()
     // Check if the part exists in any project box
     const existingPart = projectBoxes.flatMap(box => box.components).find(
       comp => comp.componentID?.equals(partID) && comp.componentSerialNo.includes(partSerialNumber)
@@ -668,7 +670,7 @@ exports.addPartsToBox = async (req, res) => {
     }
 
     let ExtistingQuanityOfPartinBBox = await calculateTotalQuantity(box, currentpartNumber)
-    const item = await Partserialinfo.findOne({ serial_no: partSerialNumber });
+    const item = await Partserialinfo.findOne({ serial_no: partSerialNumber }).lean()
     // console.log(ExtistingQuanityOfPartinBBox + item.qty , currentpartinpartlist.quantity)
 
     if (ExtistingQuanityOfPartinBBox + item.qty  > currentpartinpartlist.quantity) {
@@ -678,10 +680,9 @@ exports.addPartsToBox = async (req, res) => {
         `The Quantity of this part will be more that the ordered Quantity if you add this part. Pending Quantity is Only ${currentpartinpartlist.quantity - ExtistingQuanityOfPartinBBox } and you are trying to add ${item.qty}`
       );
     }
-
-    console.log(item.qty, currentpartinpartlist.PiecePerPacket);
+ 
     
-    if (!currentpartinpartlist.PiecePerPacket.includes(item.qty)){
+    if (currentpartinpartlist.PiecePerPacket > 0 && !currentpartinpartlist.PiecePerPacket.includes(item.qty)){
       return utils.commonResponse(
         res,
         201,
@@ -745,7 +746,7 @@ exports.addPartsToBox = async (req, res) => {
     else {
       box.quantity += 1;
     }
-    await box.save();
+    await box.save()
     // send the added and remaining quantity of this part
     return utils.commonResponse(res, 200, "Part added to box successfully", {
       boxid: box._id,

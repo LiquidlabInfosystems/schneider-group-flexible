@@ -1004,7 +1004,8 @@ const switchBoards = Array.from(switchBoardsSet);
           scannedStatusOfPacket: part.scannedStatusOfPacket
             ? part.scannedStatusOfPacket
             : [],
-          partID: part._id,
+            // partID:part._id,
+          partID: part.partID,
         });
       }
       return acc;
