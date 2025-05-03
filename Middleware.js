@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 
 // Middleware to verify token
 const verifyToken = (req, res, next) => {
+
   const token = req.header('Authorization')?.split(' ')[1]; 
   if (!token) {
     return res.status(401).json({ message: 'Access Denied. No token provided.' });

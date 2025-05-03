@@ -66,6 +66,7 @@ exports.generateComponentSerialNo = async (req, res) => {
 
 exports.generatePartSerialNo = async (req, res) => {
   // THIS FUNCTION WILL GENERATE SERIAL NUMBER FOR PARTS
+  console.log("generatePartSerialNo")
   try {
     const { hubID, partID, partNumber, qnty, projectId } = req.body;
 
@@ -86,9 +87,10 @@ exports.generatePartSerialNo = async (req, res) => {
     if (projectId) {
       console.log("searching for part in project")
       let project_id = new mongoose.Types.ObjectId(projectId)
-      let project = await Projects.findOne({ _id: project_id })
+      let project = await Projects.findOne({ _id: project_id }).lean()
       let partList = project.partList
       scannedPart = partList.find(part => part.partNumber === partNumber);
+
       if (scannedPart.length === 0) {
         return utils.commonResponse(res, 200, "part not in this current project")
       }
@@ -121,24 +123,30 @@ exports.generatePartSerialNo = async (req, res) => {
     // }
     let hubIDasObject = new mongoose.Types.ObjectId(hubID)
     const searchCriteria = partID ? { partId: partID } : { partNumber: partNumber };
-    const partSerialRecord = await partSerialNo.findOne(searchCriteria);
+    const partSerialRecord = await partSerialNo.findOne(searchCriteria).lean()
+
+    for (let i = 0; i < serialNumbers.length; i++) {
+      const serial = serialNumbers[i];
+      // const qty = 1;
+      // console.log(serial, qty)
+      await Partserialinfo.create({ serial_no: serial, qty:1 }); // Await the creation
+    }
+
+
     if (partSerialRecord) {
+
+      // const hubEntry = partSerialRecord.hubSerialNo.find(
+      //   (entry) => entry.hubId === hubIDasObject
+      // );
       const hubEntry = partSerialRecord.hubSerialNo.find(
-        (entry) => entry.hubId === hubIDasObject
+        (entry) => entry.hubId.equals(hubIDasObject)
       );
       // console.log(hubIDasObject, partID, hubEntry)
       // loop to serial number and create partserialinfo
 
-      for (let i = 0; i < serialNumbers.length; i++) {
-        const serial = serialNumbers[i];
-        const qty = PiecePerPacket[i];
-        // console.log(serial, qty)
-        await Partserialinfo.create({ serial_no: serial, qty }); // Await the creation
-      }
+    
 
       if (hubEntry) {
-
-
         await partSerialNo.updateOne(
           {
             ...searchCriteria,
@@ -163,7 +171,10 @@ exports.generatePartSerialNo = async (req, res) => {
           }
         );
       }
+
+
     } else {
+
       await partSerialNo.updateOne(
         searchCriteria,
         {
@@ -179,6 +190,8 @@ exports.generatePartSerialNo = async (req, res) => {
         { upsert: true }
       );
     }
+
+
     const part = partID
       ? await parts.findById(partID)
       : await parts.findOne({ partNumber: partNumber });
@@ -767,6 +780,7 @@ exports.generatePacketSerialNo = async (req, res) => {
       qnty: qty,
       grouped: serialNumbers.length > 0 ? true : false,
       serialNos: serialNumbers,
+      PiecePerPacket: scannedPart.PiecePerPacket,
     });
   } catch (error) {
     console.error("Error generating part serial number:", error);
