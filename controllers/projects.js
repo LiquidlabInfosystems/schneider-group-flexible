@@ -7,9 +7,119 @@ const Component = require("../Models/Components");
 const Projects = require("../Models/Projects");
 const Spoke = require("../Models/Spoke");
 const Partserialinfo = require("../Models/Partserialinfo");
+const Parts = require("../Models/Parts")
+const CommercialReference = require("../Models/CommercialReference");
 
+exports.getPartScanResult = async (req, res) => {
+  try {
+    const inputString = req.body.inputString || req.query.inputString;
 
+    if (!inputString || typeof inputString !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or missing input string'
+      });
+    }
 
+    if (inputString.length < 48) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid input string format. Expected at least 48 characters (hubId:24 + partId:24 + serialNo)'
+      });
+    }
+
+    const partId = inputString.substring(24, 48);
+
+    const part = await Parts.findOne({ _id: partId }).lean();
+
+    if (!part) {
+      return res.status(404).json({
+        success: false,
+        message: 'Part not found'
+      });
+    }
+
+    const result = await Promise.all(
+      part.parentIds.map(async (parent) => {
+        const commercialRef = await CommercialReference.findOne({
+          referenceNumber: parent.crNumber
+        }).lean();
+
+        if (!commercialRef) {
+          return {
+            crNumber: parent.crNumber,
+            id: parent._id.toString(),
+            description: 'Commercial reference not found'
+          };
+        }
+
+        return {
+          crNumber: commercialRef.referenceNumber,
+          id: commercialRef._id.toString(),
+          description: commercialRef.description
+        };
+      })
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: result
+    });
+
+  } catch (error) {
+    console.error('Error in getPartScanResult:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+exports.getPartsByReference = async (req, res) => {
+  try {
+    // Get referenceNumber from request body or query
+    const referenceNumber = req.body.referenceNumber || req.query.referenceNumber;
+
+    // Validate input
+    if (!referenceNumber || typeof referenceNumber !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or missing referenceNumber'
+      });
+    }
+
+    // Query MongoDB for CommercialReferences with matching referenceNumber
+    const commercialRef = await CommercialReference.findOne({ referenceNumber }).lean();
+
+    if (!commercialRef) {
+      return res.status(404).json({
+        success: false,
+        message: 'Commercial reference not found'
+      });
+    }
+
+    // Extract parts data
+    const partsData = commercialRef.parts.map(part => ({
+      partNumber: part.partNumber,
+      partDescription: part.partDescription,
+      quantity: part.quantity,
+      partID: part.partID.toString(),
+      id: part._id.toString()
+    }));
+
+    // Send response
+    return res.status(200).json({
+      success: true,
+      data: partsData
+    });
+
+  } catch (error) {
+    console.error('Error in getPartsByReference:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
 exports.getAllProjects = async (req, res) => {
   // THIS FUNCTION WILL RETURN ALL THE AVAILABLE PROJECTS IN TRACKING SYSTEM
   try {

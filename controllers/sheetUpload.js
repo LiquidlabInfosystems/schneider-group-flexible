@@ -682,7 +682,7 @@ exports.uploadCRFromAdmin = async (req, res) => {
     if (!req.file) {
       return res.status(400).send("No file uploaded.");
     } else {
-      console.log("Server Got the Uploaded BOM, Validating...");
+      // console.log("Server Got the Uploaded BOM, Validating...");
     }
 
     const filePath = req.file.path;
@@ -715,7 +715,7 @@ exports.uploadCRFromAdmin = async (req, res) => {
         });
 
         if (ExistingCRList) {
-          console.log("Updating CR list");
+          // console.log("Updating CR list");
           newCR = await CommercialReference.create(cr);
           newCRs.push(newCR.referenceNumber);
         }
@@ -769,7 +769,7 @@ exports.uploadCRExcelFromHub = async (req, res) => {
       return res.status(400).send("No file uploaded.");
     }
 
-    console.log("Got the Order File. ");
+    // console.log("Got the Order File. ");
     // Reading and processing the Excel file
     const filePath = req.file.path;
     const workbook = XLSX.readFile(filePath);
@@ -790,27 +790,27 @@ exports.uploadCRExcelFromHub = async (req, res) => {
 
     for (let i = 0; i < rowsToCheck; i++) {
       const row = rows[i];
-      console.log(`Checking row ${i}:`, row); // Log raw row contents
+      // console.log(`Checking row ${i}:`, row); // Log raw row contents
 
       // Skip empty rows
       if (!row || row.every((cell) => cell.toString().trim() === "")) {
-        console.log(`Row ${i} is empty, skipping.`);
+        // console.log(`Row ${i} is empty, skipping.`);
         continue;
       }
 
       // Use raw row as headers, normalize to handle whitespace
       const headers = row.map((cell) => cell.toString().trim());
-      console.log(`Row ${i} headers:`, headers); // Log detected headers
+      // console.log(`Row ${i} headers:`, headers); // Log detected headers
 
       const hasAllHeaders = requiredHeaders.every((header) =>
         headers.includes(header)
       );
-      console.log(`Row ${i} has all required headers: ${hasAllHeaders}`);
+      // console.log(`Row ${i} has all required headers: ${hasAllHeaders}`);
 
       if (hasAllHeaders) {
         headerRowIndex = i;
         headerRow = headers;
-        console.log(`Selected row ${i} as header row:`, headerRow);
+        // console.log(`Selected row ${i} as header row:`, headerRow);
         break;
       }
     }
