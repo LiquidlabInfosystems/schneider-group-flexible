@@ -652,7 +652,7 @@ exports.uploadCRFromAdminPreview = async (req, res) => {
         MotherCR["referenceNumber"] = row["Number"];
         MotherCR["description"] = row["Description"];
         CRData.push(MotherCR);
-      } else if ([2, 3, 4, 5].includes(Number(row["Level"]))) {
+      } else if ([2].includes(Number(row["Level"]))) {
         const NoOfLoadedCR = CRData.length;
         if (NoOfLoadedCR > 0) {
           let rowFields = {
@@ -719,7 +719,7 @@ exports.uploadCRFromAdmin = async (req, res) => {
           newCR = await CommercialReference.create(cr);
           newCRs.push(newCR.referenceNumber);
         }
-      } else if (Number(_rowData.Level) >= 1 && !NeedSkip) {
+      } else if (Number(_rowData.Level) = 1 && !NeedSkip) {
         const part = {
           partNumber: _rowData.Number,
           partDescription: _rowData.EnglishDescription,

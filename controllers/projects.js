@@ -86,8 +86,6 @@ exports.getPartsByReference = async (req, res) => {
         message: 'Invalid or missing referenceNumber'
       });
     }
-
-    // Query MongoDB for CommercialReferences with matching referenceNumber
     const commercialRef = await CommercialReference.findOne({ referenceNumber }).lean();
 
     if (!commercialRef) {
@@ -96,8 +94,6 @@ exports.getPartsByReference = async (req, res) => {
         message: 'Commercial reference not found'
       });
     }
-
-    // Extract parts data
     const partsData = commercialRef.parts.map(part => ({
       partNumber: part.partNumber,
       partDescription: part.partDescription,
@@ -105,8 +101,6 @@ exports.getPartsByReference = async (req, res) => {
       partID: part.partID.toString(),
       id: part._id.toString()
     }));
-
-    // Send response
     return res.status(200).json({
       success: true,
       data: partsData
@@ -121,7 +115,7 @@ exports.getPartsByReference = async (req, res) => {
   }
 };
 exports.getAllProjects = async (req, res) => {
-  // THIS FUNCTION WILL RETURN ALL THE AVAILABLE PROJECTS IN TRACKING SYSTEM
+  // THIS FUNCTION WILL RETURN ALL THE AVAILABLE PROJECTS IN TRACKING SYSTE
   try {
     let projects = await Projects.find()
 
@@ -139,7 +133,6 @@ exports.getAllProjects = async (req, res) => {
 
 
 exports.getAllProjectsInHub = async (req, res) => {
-  // THIS FUNCTION WILL RETURN ALL THE AVAILABLE PROJECTS IN TRACKING SYSTEM
   try {
     let { hub_id } = req.body
     let projects = await Projects.find({ createdTo: new mongoose.Types.ObjectId(hub_id) })
@@ -415,7 +408,7 @@ exports.getShippedDetails = async (req, res) => {
   // get the box id's
   let box_serials = project.boxSerialNumbers
   let shippedDetails = []
-  // // get all parts in each box
+  // get all parts in each box
   for (const serial of box_serials) {
     let box = await Boxes.findOne({ serialNo: serial });
     if (box) {
